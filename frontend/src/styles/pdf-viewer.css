@@ -1,0 +1,16 @@
+/* Hides the default page number input in @react-pdf-viewer */
+.rpv-core__inner-pages {
+  /* Prevent scrolling on the body when the page has a scrollbar */
+  overscroll-behavior: contain;
+}
+
+.pdf-nav-input {
+  /* Remove the arrows from the number input */
+  -moz-appearance: textfield;
+}
+
+.pdf-nav-input::-webkit-outer-spin-button,
+.pdf-nav-input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+} 

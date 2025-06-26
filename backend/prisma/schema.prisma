@@ -12,6 +12,11 @@ model Conversation {
   title     String
   fileName  String
   filePath  String
+  summary   String?   // AI-generated abstract/summary
+  keyFindings String? // Key findings from the document
+  introduction String? // Introduction overview
+  tableOfContents String? // Extracted table of contents
+  summaryGeneratedAt DateTime? // When summary was generated
   createdAt DateTime  @default(now())
   messages  Message[]
 }

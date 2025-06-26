@@ -4,6 +4,7 @@ const pdfParse = require('pdf-parse');
 const prisma = require('../prismaClient');
 const { getEmbedding } = require('../services/embedding');
 const { upsertEmbedding } = require('../services/pinecone');
+const { generatePDFSummary } = require('../services/pdfSummary');
 const { validatePDF } = require('../middleware/validation');
 const path = require('path');
 const fs = require('fs');
@@ -56,12 +57,27 @@ router.post('/', upload.single('file'), validatePDF, async (req, res) => {
     console.log('PDF text length:', text.length);
     console.log('First 500 characters of text:', text.substring(0, 500));
 
-    // Save conversation with file path
+    // Generate PDF summary
+    console.log('Generating PDF summary...');
+    let summaryData = {};
+    try {
+      summaryData = await generatePDFSummary(text, originalName);
+      console.log('PDF summary generated successfully');
+    } catch (error) {
+      console.error('Failed to generate summary, proceeding without it:', error);
+    }
+
+    // Save conversation with file path and summary
     const conversation = await prisma.conversation.create({
       data: {
         title: originalName,
         fileName: originalName,
-        filePath: filePath
+        filePath: filePath,
+        summary: summaryData.summary || null,
+        keyFindings: summaryData.keyFindings || null,
+        introduction: summaryData.introduction || null,
+        tableOfContents: summaryData.tableOfContents || null,
+        summaryGeneratedAt: summaryData.summary ? new Date() : null
       }
     });
     console.log('Created conversation:', conversation.id);

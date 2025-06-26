@@ -1,6 +1,7 @@
 const express = require('express');
 const prisma = require('../prismaClient');
 const { deleteEmbeddings } = require('../services/pinecone');
+const { generatePDFSummary } = require('../services/pdfSummary');
 const fs = require('fs');
 
 const router = express.Router();
@@ -135,6 +136,115 @@ router.patch('/:conversationId/rename', async (req, res) => {
     console.error('Error renaming conversation:', error);
     res.status(500).json({ 
       error: 'Error renaming conversation', 
+      details: error.message 
+    });
+  }
+});
+
+// Get summary for a conversation
+router.get('/:conversationId/summary', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    console.log('Fetching summary for conversation:', conversationId);
+    
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId },
+      select: {
+        id: true,
+        title: true,
+        fileName: true,
+        summary: true,
+        keyFindings: true,
+        introduction: true,
+        tableOfContents: true,
+        summaryGeneratedAt: true,
+        createdAt: true
+      }
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    // If no summary exists, return a message indicating it needs to be generated
+    if (!conversation.summary) {
+      return res.json({
+        ...conversation,
+        summary: null,
+        needsGeneration: true,
+        message: 'Summary not yet generated for this document'
+      });
+    }
+
+    res.json(conversation);
+  } catch (error) {
+    console.error('Error fetching summary:', error);
+    res.status(500).json({ 
+      error: 'Error fetching summary',
+      details: error.message 
+    });
+  }
+});
+
+// Generate or regenerate summary for a conversation
+router.post('/:conversationId/summary/generate', async (req, res) => {
+  try {
+    const { conversationId } = req.params;
+    console.log('Generating summary for conversation:', conversationId);
+    
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId }
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    if (!conversation.filePath || !fs.existsSync(conversation.filePath)) {
+      return res.status(404).json({ error: 'PDF file not found' });
+    }
+
+    // Read and parse the PDF to get text content
+    const pdfParse = require('pdf-parse');
+    const dataBuffer = fs.readFileSync(conversation.filePath);
+    const data = await pdfParse(dataBuffer);
+    const text = data.text.trim();
+
+    if (!text) {
+      return res.status(400).json({ error: 'No text content found in PDF' });
+    }
+
+    // Generate summary
+    const summaryData = await generatePDFSummary(text, conversation.fileName);
+
+    // Update conversation with summary
+    const updatedConversation = await prisma.conversation.update({
+      where: { id: conversationId },
+      data: {
+        summary: summaryData.summary,
+        keyFindings: summaryData.keyFindings,
+        introduction: summaryData.introduction,
+        tableOfContents: summaryData.tableOfContents,
+        summaryGeneratedAt: new Date()
+      },
+      select: {
+        id: true,
+        title: true,
+        fileName: true,
+        summary: true,
+        keyFindings: true,
+        introduction: true,
+        tableOfContents: true,
+        summaryGeneratedAt: true,
+        createdAt: true
+      }
+    });
+
+    res.json(updatedConversation);
+  } catch (error) {
+    console.error('Error generating summary:', error);
+    res.status(500).json({ 
+      error: 'Error generating summary',
       details: error.message 
     });
   }
