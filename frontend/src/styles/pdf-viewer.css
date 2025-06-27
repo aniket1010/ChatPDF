@@ -1,7 +1,128 @@
-/* Hides the default page number input in @react-pdf-viewer */
+/* Hide PDF scrollbars but maintain full functionality */
 .rpv-core__inner-pages {
   /* Prevent scrolling on the body when the page has a scrollbar */
   overscroll-behavior: contain;
+  /* Hide scrollbar but keep scrolling functionality */
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  /* Ensure smooth scrolling */
+  scroll-behavior: smooth !important;
+}
+
+.rpv-core__inner-pages::-webkit-scrollbar {
+  display: none !important;
+}
+
+/* Ensure consistent background for PDF viewer */
+.rpv-core__viewer {
+  background-color: #F9F4EB !important;
+  /* Hide scrollbar but keep functionality */
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+  /* Remove any height constraints that could interfere with parent scrolling */
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+}
+
+.rpv-core__viewer::-webkit-scrollbar {
+  display: none !important;
+}
+
+.rpv-core__inner-pages {
+  background-color: #F9F4EB !important;
+  padding: 0 !important;
+  /* Ensure natural height flow */
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+}
+
+.rpv-core__page-layer {
+  background-color: white !important;
+  box-shadow: none !important;
+  margin: 0 auto !important;
+  max-width: 100% !important;
+  border: none !important;
+  margin-bottom: 0 !important;
+  margin-top: 0 !important;
+  width: 8.5in !important;
+  max-width: 8.5in !important;
+}
+
+/* Remove spacing between pages for seamless experience */
+.rpv-core__page-layer + .rpv-core__page-layer {
+  margin-top: 0 !important;
+  border-top: none !important;
+}
+
+/* Remove any default padding/margins */
+.rpv-core__inner-page {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Ensure pages are flush with each other */
+.rpv-core__inner-pages > div {
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Remove any gaps between PDF pages */
+.rpv-core__page-layer canvas {
+  display: block !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 100% !important;
+  height: auto !important;
+}
+
+/* Remove borders and spacing from PDF container */
+.rpv-core__doc {
+  margin: 0 !important;
+  padding: 0 !important;
+  /* Ensure natural height flow */
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+}
+
+/* Ensure no white space around pages */
+.rpv-core__page {
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+/* Perfect seamless integration - remove first page top margin */
+.rpv-core__page-layer:first-child {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+
+/* Ensure consistent page width matching summary */
+.rpv-core__page-layer,
+.rpv-core__page-layer canvas,
+.rpv-core__page {
+  width: 8.5in !important;
+  max-width: 8.5in !important;
+  min-width: 8.5in !important;
+}
+
+/* Ensure the entire PDF container flows naturally without internal scrolling */
+.rpv-core__container {
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
+}
+
+/* Remove any fixed heights that could cause scrolling conflicts */
+.rpv-core__viewer-container {
+  height: auto !important;
+  min-height: auto !important;
+  max-height: none !important;
+  overflow: visible !important;
 }
 
 .pdf-nav-input {

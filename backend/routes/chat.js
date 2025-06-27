@@ -26,7 +26,15 @@ router.get('/:conversationId', async (req, res) => {
       orderBy: { createdAt: 'asc' }
     });
 
-    res.json(messages);
+    // Transform messages to frontend format
+    const formattedMessages = messages.map(message => ({
+      id: message.id,
+      text: message.text,
+      isUser: message.role === 'user',
+      timestamp: message.createdAt
+    }));
+
+    res.json(formattedMessages);
   } catch (error) {
     console.error('Error fetching messages:', error);
     res.status(500).json({ error: 'Error fetching messages' });
@@ -63,8 +71,17 @@ router.post('/:conversationId', async (req, res) => {
     console.log('Formatted context:', context);
 
     if (!context) {
-      return res.json({ 
-        answer: "I couldn't find any relevant information in the document to answer your question. Please try asking about something else or rephrase your question." 
+      const errorMessage = "I couldn't find any relevant information in the document to answer your question. Please try asking about something else or rephrase your question.";
+      
+      const assistantMessage = await prisma.message.create({
+        data: { conversationId, role: 'assistant', text: errorMessage }
+      });
+
+      return res.json({
+        id: assistantMessage.id,
+        text: errorMessage,
+        isUser: false,
+        timestamp: assistantMessage.createdAt
       });
     }
 
@@ -74,7 +91,13 @@ router.post('/:conversationId', async (req, res) => {
       data: { conversationId, role: 'assistant', text: answer }
     });
 
-    res.json({ answer });
+    // Return message in frontend format
+    res.json({
+      id: assistantMessage.id,
+      text: answer,
+      isUser: false,
+      timestamp: assistantMessage.createdAt
+    });
   } catch (error) {
     console.error('Error in chat route:', error);
     res.status(500).send('Error chatting');

@@ -30,8 +30,9 @@ const TransitionOverlay = ({ state, visible }: { state: ViewState; visible: bool
 
   return (
     <div
-      className="absolute inset-0 bg-gray-100 dark:bg-gray-900 flex items-center justify-center z-10"
+      className="absolute inset-0 flex items-center justify-center z-10"
       style={{
+        backgroundColor: '#F9F4EB',
         opacity: visible ? 1 : 0,
         transition: 'opacity 0.4s ease',
         pointerEvents: visible ? 'auto' : 'none',
@@ -121,7 +122,7 @@ export default function PreviewPDF({ conversationId }: { conversationId: string 
   
   if (!conversationId) {
     return (
-      <div className="h-full flex items-center justify-center text-gray-400 p-6">
+      <div className="h-full flex items-center justify-center text-gray-400 p-6" style={{ backgroundColor: '#F9F4EB' }}>
         <div className="text-center">
           <span className="text-lg">No conversation selected</span>
         </div>
@@ -133,12 +134,13 @@ export default function PreviewPDF({ conversationId }: { conversationId: string 
 
   return (
     <div 
-      className="w-full h-full relative bg-gray-100 dark:bg-gray-900"
+      className="w-full h-full relative flex justify-center px-4"
+      style={{ backgroundColor: '#F9F4EB' }}
       onMouseMove={handleMouseMove}
     >
       <TransitionOverlay state={viewState} visible={isOverlayVisible} />
 
-      <div className="w-full h-full" style={{ opacity: viewState === 'idle' ? 1 : 0, transition: 'opacity 0.4s ease' }}>
+      <div className="w-full max-w-[8.5in]" style={{ opacity: viewState === 'idle' ? 1 : 0, transition: 'opacity 0.4s ease' }}>
         {isClient && pdfUrl && (
           <PdfViewerCore
             pdfUrl={pdfUrl}

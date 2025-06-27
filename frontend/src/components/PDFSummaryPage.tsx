@@ -1,204 +1,207 @@
-'use client';
+"use client"
 
-import { useState, useEffect } from 'react';
-import { FileText, RefreshCw, ChevronRight, BookOpen, Lightbulb, List, Clock } from 'lucide-react';
-import { getConversationSummary, generateConversationSummary } from '@/services/api';
+import { useState, useEffect } from "react"
+import { Loader2, RefreshCw, AlertTriangle } from "lucide-react"
+import { motion, AnimatePresence } from "framer-motion"
+import { Button } from "@/components/ui/button"
+import { getConversationSummary, generateConversationSummary } from "@/services/api"
 
 interface SummaryData {
-  id: string;
-  title: string;
-  fileName: string;
-  summary: string | null;
-  keyFindings: string | null;
-  introduction: string | null;
-  tableOfContents: string | null;
-  summaryGeneratedAt: string | null;
-  createdAt: string;
-  needsGeneration?: boolean;
-  message?: string;
+  id: string
+  title: string
+  fileName: string
+  summary: string | null
+  keyFindings: string | null
+  createdAt: string
 }
 
 interface PDFSummaryPageProps {
-  conversationId: string;
-  onNavigateToPage: (pageNumber: number) => void;
+  conversationId: string
 }
 
-export default function PDFSummaryPage({ conversationId, onNavigateToPage }: PDFSummaryPageProps) {
-  const [summaryData, setSummaryData] = useState<SummaryData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    loadSummary();
-  }, [conversationId]);
+export default function PDFSummaryPage({ conversationId }: PDFSummaryPageProps) {
+  const [summaryData, setSummaryData] = useState<SummaryData | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [regenerating, setRegenerating] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const loadSummary = async () => {
+    setLoading(true)
+    setError(null)
     try {
-      setLoading(true);
-      setError(null);
-      const data = await getConversationSummary(conversationId);
-      setSummaryData(data);
+      const data = await getConversationSummary(conversationId)
+      setSummaryData(data)
     } catch (err) {
-      console.error('Failed to load summary:', err);
-      setError('Failed to load summary');
+      console.error("Failed to load summary:", err)
+      setError(err instanceof Error ? err.message : "Failed to load summary. Please try again.")
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  };
+  }
 
-  const handleGenerateSummary = async () => {
+  const handleRegenerateSummary = async () => {
+    setRegenerating(true)
+    setError(null)
     try {
-      setGenerating(true);
-      setError(null);
-      const data = await generateConversationSummary(conversationId);
-      setSummaryData(data);
+      const data = await generateConversationSummary(conversationId)
+      setSummaryData(data)
     } catch (err) {
-      console.error('Failed to generate summary:', err);
-      setError('Failed to generate summary');
+      console.error("Failed to regenerate summary:", err)
+      setError(err instanceof Error ? err.message : "Failed to regenerate summary. Please try again.")
     } finally {
-      setGenerating(false);
+      setRegenerating(false)
     }
-  };
+  }
 
-  const formatText = (text: string) => {
-    return text.split('\n').map((line, index) => (
-      <p key={index} className="mb-2 last:mb-0">
-        {line}
-      </p>
-    ));
-  };
+  useEffect(() => {
+    loadSummary()
+  }, [conversationId])
 
-  const formatBulletPoints = (text: string) => {
-    const lines = text.split('\n').filter(line => line.trim());
-    return (
-      <ul className="space-y-0.5 ml-6">
-        {lines.map((line, index) => (
-          <li key={index} className="list-disc text-gray-900">
-            {line.replace(/^[-•*]\s*/, '')}
-          </li>
-        ))}
-      </ul>
-    );
-  };
+  const formatKeyFindings = (text: string | null): string[] => {
+    if (!text) return []
+    return text
+      .split("\n")
+      .map((line) => line.trim().replace(/^[•\-*]\s*/, ""))
+      .filter(Boolean)
+  }
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-full bg-white">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading summary...</p>
-        </div>
+      <div className="h-screen flex items-center justify-center" style={{ backgroundColor: "#F9F4EB" }}>
+        <motion.div
+          className="text-center"
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+        >
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Number.POSITIVE_INFINITY, ease: "linear" }}
+            className="w-16 h-16 border-4 border-black/10 border-t-black rounded-full mx-auto mb-6"
+          />
+          <p className="text-black/60 text-xl font-light">Analyzing document...</p>
+        </motion.div>
       </div>
-    );
+    )
   }
 
   if (error) {
     return (
-      <div className="flex items-center justify-center h-full bg-white p-8">
-        <div className="text-center max-w-md">
-          <div className="w-16 h-16 mx-auto mb-4 bg-red-100 rounded-full flex items-center justify-center">
-            <FileText className="w-8 h-8 text-red-500" />
-          </div>
-          <h2 className="text-xl font-semibold text-gray-800 mb-2">Error Loading Summary</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={loadSummary}
-            className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-          >
+      <div className="h-screen flex items-center justify-center p-4" style={{ backgroundColor: "#F9F4EB" }}>
+        <motion.div
+          className="bg-white p-8 rounded-lg shadow-2xl text-center max-w-md w-full border-2 border-black"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <AlertTriangle className="w-12 h-12 text-black/40 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-black mb-2">Something went wrong</h2>
+          <p className="text-black/60 mb-6">{error}</p>
+          <Button onClick={loadSummary} className="bg-black hover:bg-black/80 text-white">
+            <RefreshCw className="w-4 h-4 mr-2" />
             Try Again
-          </button>
-        </div>
+          </Button>
+        </motion.div>
       </div>
-    );
+    )
   }
 
-  if (!summaryData) {
-    return (
-      <div className="flex items-center justify-center h-full bg-white">
-        <p className="text-gray-600">No summary data available</p>
-      </div>
-    );
-  }
+  if (!summaryData) return null
 
-  const needsGeneration = summaryData.needsGeneration || !summaryData.summary;
+  const keyFindings = formatKeyFindings(summaryData.keyFindings)
 
   return (
-    <div className="bg-white h-full overflow-y-auto" style={{ fontFamily: 'Times, serif' }}>
-      {/* PDF-like page container - More compact */}
-      <div className="max-w-[8.5in] mx-auto bg-white px-12 py-8">
-        {/* Document Header - More compact */}
-        <div className="text-center mb-4 pb-2 border-b border-gray-400">
-          <h1 className="text-xl font-bold text-gray-900 mb-1" style={{ fontFamily: 'Times, serif' }}>
-            {summaryData.fileName.replace('.pdf', '')}
-          </h1>
-          <p className="text-sm text-gray-600 italic">Document Overview</p>
-        </div>
-
-        {/* Compact content layout */}
-        <div className="space-y-3 text-gray-900" style={{ lineHeight: '1.3' }}>
-          {/* Abstract */}
-          <section>
-            <h2 className="text-base font-bold mb-1 text-gray-900" style={{ fontFamily: 'Times, serif' }}>
-              Abstract
-            </h2>
-            <div className="text-justify text-sm leading-snug">
-              {summaryData?.summary ? (
-                formatText(summaryData.summary)
-              ) : (
-                <p className="italic text-gray-600">
-                  {generating ? 'Generating summary...' : 'This document contains valuable information. Summary will be generated automatically.'}
-                </p>
-              )}
+    <div className="min-h-screen" style={{ backgroundColor: "#F9F4EB" }}>
+      <AnimatePresence>
+        {regenerating && (
+          <motion.div
+            className="absolute inset-0 bg-black/20 backdrop-blur-sm z-50 flex items-center justify-center"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            <div className="bg-white rounded-lg p-6 shadow-2xl border-2 border-black">
+              <div className="flex items-center gap-4">
+                <Loader2 className="w-6 h-6 animate-spin text-black" />
+                <span className="text-black font-medium">Regenerating analysis...</span>
+              </div>
             </div>
-          </section>
-
-          {/* Key Findings */}
-          <section>
-            <h2 className="text-base font-bold mb-1 text-gray-900" style={{ fontFamily: 'Times, serif' }}>
-              Key Findings
-            </h2>
-            <div className="text-sm leading-snug">
-              {summaryData?.keyFindings ? (
-                formatBulletPoints(summaryData.keyFindings)
-              ) : (
-                <ul className="space-y-0.5 ml-6 italic text-gray-600">
-                  <li className="list-disc">{generating ? 'Analyzing document...' : 'Key insights will be extracted from the document'}</li>
-                  <li className="list-disc">{generating ? 'Extracting findings...' : 'Important conclusions will be highlighted'}</li>
-                  <li className="list-disc">{generating ? 'Processing content...' : 'Main discoveries will be summarized'}</li>
-                </ul>
-              )}
-            </div>
-          </section>
-
-          {/* Introduction */}
-          <section>
-            <h2 className="text-base font-bold mb-1 text-gray-900" style={{ fontFamily: 'Times, serif' }}>
-              Introduction
-            </h2>
-            <div className="text-justify text-sm leading-snug">
-              {summaryData?.introduction ? (
-                formatText(summaryData.introduction)
-              ) : (
-                <p className="italic text-gray-600">
-                  {generating ? 'Preparing introduction...' : 'This section will provide an overview of the document\'s purpose and scope.'}
-                </p>
-              )}
-            </div>
-          </section>
-        </div>
-
-        {/* Auto-generate if needed */}
-        {needsGeneration && !generating && (
-          <div className="hidden">
-            {(() => {
-              // Auto-trigger generation
-              setTimeout(() => handleGenerateSummary(), 1000);
-              return null;
-            })()}
-          </div>
+          </motion.div>
         )}
+      </AnimatePresence>
+
+      <div className="h-full flex flex-col max-w-6xl mx-auto">
+        {/* Document Container */}
+        <div className="m-8 bg-white border-4 border-black flex flex-col min-h-[calc(100vh-4rem)]">
+          {/* Header Section */}
+          <motion.div
+            className="text-center pt-12 pb-8 px-8"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          >
+
+                         <motion.h1
+               className="text-4xl md:text-5xl lg:text-6xl font-bold text-black tracking-wider leading-tight mb-6"
+               initial={{ opacity: 0, y: 20 }}
+               animate={{ opacity: 1, y: 0 }}
+               transition={{ duration: 0.8, delay: 0.4 }}
+             >
+               {summaryData.fileName.replace(/\.pdf$/i, "").replace(/_/g, " ")}
+             </motion.h1>
+
+
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.6, delay: 1.0 }}>
+              <Button
+                onClick={handleRegenerateSummary}
+                disabled={regenerating}
+                className="bg-black hover:bg-black/80 text-white px-6 py-2 text-sm font-medium"
+              >
+                <RefreshCw className={`w-4 h-4 mr-2 ${regenerating ? "animate-spin" : ""}`} />
+                {regenerating ? "REGENERATING..." : "REGENERATE"}
+              </Button>
+            </motion.div>
+          </motion.div>
+
+          {/* Content Section */}
+          <div className="flex-1 px-8 pb-8 space-y-8">
+            {/* Summary Section */}
+            <motion.div
+              className="border-2 border-black p-6"
+              style={{ backgroundColor: "#C0C9EE" }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1.2 }}
+            >
+                             <h2 className="text-xl font-bold text-black mb-4 tracking-wide">SUMMARY</h2>
+               <p className="text-black/80 leading-relaxed text-sm">{summaryData.summary}</p>
+            </motion.div>
+
+            {/* Key Findings Section */}
+            <motion.div
+              className="border-2 border-black p-6 bg-white"
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.8, delay: 1.4 }}
+            >
+              <h2 className="text-xl font-bold text-black mb-6 tracking-wide">KEY FINDINGS</h2>
+              <div className="space-y-3">
+                {keyFindings.map((finding, index) => (
+                  <motion.div
+                    key={index}
+                    className="flex items-start gap-3"
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ duration: 0.6, delay: 1.6 + index * 0.1 }}
+                  >
+                    <span className="text-black font-bold mt-1">→</span>
+                                         <p className="text-black/80 text-sm font-medium tracking-wide">{finding}</p>
+                  </motion.div>
+                ))}
+              </div>
+            </motion.div>
+          </div>
+        </div>
       </div>
     </div>
-  );
-} 
+  )
+}

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { ScrollArea } from "@/components/ui/scroll-area"
-import { PanelLeft, PanelRight, Plus, FileText, Sparkles } from "lucide-react"
+import { PanelLeft, PanelRight, Plus, FileText, MessageSquare } from "lucide-react"
 import { useRouter, usePathname } from "next/navigation"
 import { getConversations } from "@/services/api"
 
@@ -28,7 +28,6 @@ export default function Sidebar({ selectedConversation, onSelectConversation }: 
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Extract active conversation ID from pathname if not provided via props
   const activeConversationId =
     selectedConversation || (pathname.startsWith("/conversation/") ? pathname.split("/")[2] : null)
 
@@ -40,14 +39,11 @@ export default function Sidebar({ selectedConversation, onSelectConversation }: 
     try {
       setLoading(true)
       setError(null)
-
-      console.log("Loading conversations from API...")
       const data = await getConversations()
-      console.log("Loaded conversations:", data)
       setConversations(data)
     } catch (err) {
       console.error("Failed to load conversations:", err)
-      setError("Failed to load conversations. Make sure the backend is running.")
+      setError("Failed to load conversations")
     } finally {
       setLoading(false)
     }
@@ -63,212 +59,174 @@ export default function Sidebar({ selectedConversation, onSelectConversation }: 
 
   const handleNewChat = () => {
     console.log("New chat clicked")
-    // TODO: Implement new chat functionality
+  }
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffTime = Math.abs(now.getTime() - date.getTime())
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
+
+    if (diffDays === 1) return "Today"
+    if (diffDays === 2) return "Yesterday"
+    if (diffDays <= 7) return `${diffDays} days ago`
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" })
   }
 
   return (
     <div
-      className={`bg-[#F9F4EB] border-r border-gray-200 transition-all duration-500 ease-in-out ${
+      className={`bg-[#F9F4EB] border-r border-black/10 transition-all duration-300 ease-out ${
         isExpanded ? "w-80" : "w-16"
-      } flex flex-col font-sans relative overflow-hidden h-full shadow-sm`}
+      } flex flex-col h-full shadow-sm`}
     >
       {/* Header */}
-      <div className={`border-b border-gray-200 relative ${isExpanded ? "px-6 py-6" : "px-3 py-6"}`}>
-        <div
-          className={`flex items-center transition-all duration-300 ${isExpanded ? "justify-between" : "justify-center"}`}
-        >
+      <div className={`border-b border-black/10 ${isExpanded ? "px-6 py-6" : "px-3 py-6"}`}>
+        <div className={`flex items-center ${isExpanded ? "justify-between" : "justify-center"}`}>
           {isExpanded && (
             <div
-              className="animate-fade-in cursor-pointer group"
+              className="cursor-pointer transition-opacity duration-200 hover:opacity-80"
               onClick={() => router.push("/")}
             >
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-pink-200 to-amber-200 rounded-lg flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-gray-700" />
-                </div>
-                <div className="text-xl font-bold text-gray-800">ChatPDF</div>
-              </div>
-              <div className="text-xs text-gray-600 font-medium tracking-wide uppercase">
-                Document Intelligence
-              </div>
+              <h1 className="text-2xl font-bold text-black mb-1 tracking-tight">ChatPDF</h1>
+              <p className="text-xs text-black/60 font-medium">Document Intelligence</p>
             </div>
           )}
           <button
-            className="w-10 h-10 cursor-pointer transition-all duration-300 hover:bg-white/60 active:scale-95 text-gray-700 flex items-center justify-center group rounded-lg"
+            className="w-10 h-10 rounded-lg hover:bg-black/5 transition-colors duration-200 flex items-center justify-center text-black/70 hover:text-black"
             onClick={() => setIsExpanded(!isExpanded)}
+            aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
           >
-            {isExpanded ? (
-              <PanelLeft className="h-5 w-5 transition-transform duration-200 group-hover:scale-110" />
-            ) : (
-              <PanelRight className="h-5 w-5 transition-transform duration-200 group-hover:scale-110" />
-            )}
+            {isExpanded ? <PanelLeft className="h-5 w-5" /> : <PanelRight className="h-5 w-5" />}
           </button>
         </div>
       </div>
 
       {isExpanded ? (
         <>
-          {/* New Chat */}
-          <div className="px-6 py-4">
+          {/* New Chat Button */}
+          <div className="p-6 pb-4">
             <Button
               onClick={handleNewChat}
-              className="w-full btn-primary h-12 rounded-xl shadow-sm hover:shadow-md group"
+              className="w-full bg-black hover:bg-black/90 text-white h-11 rounded-xl font-medium transition-all duration-200 hover:shadow-md active:scale-[0.98]"
             >
-              <Plus className="h-4 w-4 mr-3 transition-transform duration-200 group-hover:rotate-90" />
-              <span className="font-semibold">New Chat</span>
+              <Plus className="h-4 w-4 mr-2" />
+              New Chat
             </Button>
           </div>
 
-          {/* Conversations Header */}
+          {/* Recent Chats Header */}
           <div className="px-6 pb-4">
-            <div className="text-lg font-semibold text-gray-700">Recent Chats</div>
-            <div className="text-sm text-gray-500 mt-1">Your document conversations</div>
+            <h2 className="text-sm font-semibold text-black/80">Recent Chats</h2>
           </div>
 
-          {/* Conversations */}
-          <ScrollArea className="flex-1 scrollbar-custom">
-            <div className="space-y-2 px-6 pb-6">
+          {/* Conversations List */}
+          <ScrollArea className="flex-1">
+            <div className="px-6 pb-6 space-y-1">
               {loading ? (
-                // Enhanced loading skeleton
                 Array.from({ length: 4 }).map((_, index) => (
                   <div
                     key={index}
-                    className="p-4 rounded-xl bg-white/50 animate-pulse"
+                    className="p-4 rounded-xl animate-pulse"
                     style={{ animationDelay: `${index * 100}ms` }}
                   >
-                    <div className="h-4 bg-gray-300 rounded mb-2"></div>
-                    <div className="h-3 bg-gray-200 w-20 rounded"></div>
+                    <div className="h-4 bg-black/10 rounded mb-2"></div>
+                    <div className="h-3 bg-black/5 rounded w-20"></div>
                   </div>
                 ))
               ) : error ? (
-                <div className="p-6 text-center animate-fade-in">
-                  <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-                    <span className="text-red-500 text-lg">⚠</span>
-                  </div>
-                  <div className="text-red-600 text-sm mb-4 font-medium">{error}</div>
+                <div className="p-6 text-center">
+                  <p className="text-sm text-red-600 mb-4">{error}</p>
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={loadConversations}
-                    className="btn-secondary text-sm"
+                    className="border-black/20 hover:bg-black hover:text-white transition-colors duration-200"
                   >
                     Try Again
                   </Button>
                 </div>
-              ) : (
-                conversations.map((conversation, index) => (
-                  <div
+              ) : conversations.length > 0 ? (
+                conversations.map((conversation) => (
+                  <button
                     key={conversation.id}
-                    className={`p-4 cursor-pointer transition-all duration-300 rounded-xl group hover:scale-[1.02] sidebar-item ${
-                      conversation.id === activeConversationId
-                        ? "bg-pink-200 shadow-md border border-pink-300"
-                        : "bg-white/60 hover:bg-white hover:shadow-sm"
+                    className={`w-full p-4 rounded-xl text-left transition-all duration-200 group ${
+                      conversation.id === activeConversationId ? "bg-[#C0C9EE] shadow-sm" : "hover:bg-black/5"
                     }`}
                     onClick={() => handleConversationSelect(conversation.id)}
-                    style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                        conversation.id === activeConversationId 
-                          ? "bg-pink-300" 
-                          : "bg-amber-200"
-                      }`}>
-                        <FileText className="w-4 h-4 text-gray-700" />
+                      <div className="mt-0.5 flex-shrink-0">
+                        <MessageSquare className="h-4 w-4 text-black/60" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="font-medium text-gray-800 mb-1 truncate">
-                          {conversation.title}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(conversation.createdAt).toLocaleDateString()}
-                        </div>
+                        <h3 className="font-medium text-black text-sm truncate mb-1">{conversation.title}</h3>
+                        <p className="text-xs text-black/60">{formatDate(conversation.createdAt)}</p>
                       </div>
                     </div>
-                  </div>
+                  </button>
                 ))
-              )}
-
-              {!loading && !error && conversations.length === 0 && (
-                <div className="p-8 text-center animate-fade-in">
-                  <div className="w-16 h-16 bg-gradient-to-br from-pink-200 to-amber-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                    <FileText className="w-8 h-8 text-gray-600" />
+              ) : (
+                <div className="p-8 text-center">
+                  <div className="w-12 h-12 bg-black/5 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <MessageSquare className="h-6 w-6 text-black/30" />
                   </div>
-                  <div className="text-gray-600 font-medium mb-2">No conversations yet</div>
-                  <div className="text-gray-500 text-sm">
-                    Upload a PDF to get started
-                  </div>
+                  <p className="text-sm font-medium text-black/60 mb-1">No conversations yet</p>
+                  <p className="text-xs text-black/40">Upload a PDF to get started</p>
                 </div>
               )}
             </div>
           </ScrollArea>
-
-          {/* Footer */}
-          <div className="px-6 py-4 border-t border-gray-200">
-            <div className="text-center">
-              <div className="text-xs text-gray-400 font-light">✨ Powered by AI ✨</div>
-            </div>
-          </div>
         </>
       ) : (
         <>
-          {/* Collapsed New Chat Icon */}
-          <div className="px-3 py-4 flex justify-center">
+          {/* Collapsed New Chat Button */}
+          <div className="p-3 pt-6">
             <button
               onClick={handleNewChat}
-              className="w-10 h-10 cursor-pointer transition-all duration-300 btn-primary hover:shadow-md active:scale-95 flex items-center justify-center rounded-lg group"
+              className="w-10 h-10 bg-black hover:bg-black/90 text-white rounded-lg transition-all duration-200 flex items-center justify-center hover:shadow-md active:scale-95"
+              aria-label="New chat"
             >
-              <Plus className="h-5 w-5 transition-transform duration-200 group-hover:rotate-90" />
+              <Plus className="h-5 w-5" />
             </button>
           </div>
 
           {/* Collapsed Conversations */}
-          <ScrollArea className="flex-1 scrollbar-custom">
-            <div className="space-y-3 px-3 py-4">
+          <ScrollArea className="flex-1">
+            <div className="p-3 space-y-2">
               {loading ? (
-                // Loading skeleton for collapsed state
                 Array.from({ length: 4 }).map((_, index) => (
                   <div
                     key={index}
-                    className="w-10 h-10 bg-gray-300 animate-pulse rounded-lg mx-auto"
+                    className="w-10 h-10 bg-black/10 rounded-lg animate-pulse"
                     style={{ animationDelay: `${index * 100}ms` }}
                   ></div>
                 ))
               ) : error ? (
-                <div className="w-10 h-10 bg-red-100 border border-red-300 rounded-lg flex items-center justify-center mx-auto transition-all duration-200 hover:scale-105">
-                  <span className="text-red-600 text-xs font-bold">!</span>
+                <div className="w-10 h-10 bg-red-50 border border-red-200 rounded-lg flex items-center justify-center">
+                  <span className="text-red-500 text-xs font-bold">!</span>
                 </div>
-              ) : (
-                conversations.map((conversation, index) => (
+              ) : conversations.length > 0 ? (
+                conversations.map((conversation) => (
                   <button
                     key={conversation.id}
-                    className={`w-10 h-10 cursor-pointer transition-all duration-300 rounded-lg flex items-center justify-center mx-auto hover:scale-105 active:scale-95 shadow-sm hover:shadow-md ${
+                    className={`w-10 h-10 rounded-lg transition-all duration-200 flex items-center justify-center hover:scale-105 active:scale-95 ${
                       conversation.id === activeConversationId
-                        ? "bg-pink-200 border border-pink-300 text-gray-800"
-                        : "bg-white border border-gray-200 text-gray-600 hover:bg-amber-100"
+                        ? "bg-[#C0C9EE] text-black shadow-sm"
+                        : "bg-black/5 hover:bg-black/10 text-black/70"
                     }`}
                     onClick={() => handleConversationSelect(conversation.id)}
                     title={conversation.title}
-                    style={{ animationDelay: `${index * 50}ms` }}
                   >
-                    <FileText className="h-4 w-4 transition-transform duration-200 hover:scale-110" />
+                    <FileText className="h-4 w-4" />
                   </button>
                 ))
-              )}
-
-              {!loading && !error && conversations.length === 0 && (
-                <div className="w-10 h-10 bg-gray-100 border border-gray-200 rounded-lg flex items-center justify-center mx-auto transition-all duration-200 hover:scale-105">
-                  <span className="text-gray-400 text-xs font-light">0</span>
+              ) : (
+                <div className="w-10 h-10 bg-black/5 rounded-lg flex items-center justify-center">
+                  <span className="text-black/30 text-xs">0</span>
                 </div>
               )}
             </div>
           </ScrollArea>
-
-          {/* Collapsed Footer */}
-          <div className="px-3 py-4 border-t border-gray-200">
-            <div className="text-center">
-              <span className="text-xs text-gray-400 font-light">✨</span>
-            </div>
-          </div>
         </>
       )}
     </div>

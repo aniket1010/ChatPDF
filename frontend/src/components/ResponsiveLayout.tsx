@@ -38,7 +38,7 @@ export default function ResponsiveLayout({ conversationId }: ResponsiveLayoutPro
     const loadConversationDetails = async () => {
       try {
         const details = await getConversationDetails(conversationId);
-        setPdfTitle(details.fileName || details.title || '');
+        setPdfTitle(details.title || details.fileName || '');
       } catch (error) {
         console.error('Failed to load conversation details:', error);
       }

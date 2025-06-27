@@ -32,7 +32,7 @@ const PdfViewerCore: React.FC<PdfViewerCoreProps> = ({ pdfUrl, pageNavigationPlu
 
   if (!isLoaded || !ViewerComponent || !WorkerComponent || !SpecialZoomLevel) {
     return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+      <div className="w-full h-full flex items-center justify-center" style={{ backgroundColor: '#F9F4EB' }}>
         <div className="text-gray-500">Loading PDF viewer...</div>
       </div>
     );
