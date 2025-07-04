@@ -2,6 +2,7 @@ const express = require('express');
 const prisma = require('../prismaClient');
 const { deleteEmbeddings } = require('../services/pinecone');
 const { generatePDFSummary } = require('../services/pdfSummary');
+const { processSummaryContent } = require('../services/messageProcessor');
 const fs = require('fs');
 
 const router = express.Router();
@@ -154,10 +155,16 @@ router.get('/:conversationId/summary', async (req, res) => {
         title: true,
         fileName: true,
         summary: true,
+        summaryFormatted: true,
         keyFindings: true,
+        keyFindingsFormatted: true,
         introduction: true,
+        introductionFormatted: true,
         tableOfContents: true,
+        tableOfContentsFormatted: true,
+        summaryContentType: true,
         summaryGeneratedAt: true,
+        summaryProcessedAt: true,
         createdAt: true
       }
     });
@@ -176,7 +183,20 @@ router.get('/:conversationId/summary', async (req, res) => {
       });
     }
 
-    res.json(conversation);
+    // Return formatted content if available, otherwise return original
+    const responseData = {
+      ...conversation,
+      summary: conversation.summaryFormatted || conversation.summary,
+      keyFindings: conversation.keyFindingsFormatted || conversation.keyFindings,
+      introduction: conversation.introductionFormatted || conversation.introduction,
+      tableOfContents: conversation.tableOfContentsFormatted || conversation.tableOfContents,
+      originalSummary: conversation.summary,
+      originalKeyFindings: conversation.keyFindings,
+      originalIntroduction: conversation.introduction,
+      originalTableOfContents: conversation.tableOfContents
+    };
+
+    res.json(responseData);
   } catch (error) {
     console.error('Error fetching summary:', error);
     res.status(500).json({ 
@@ -217,30 +237,58 @@ router.post('/:conversationId/summary/generate', async (req, res) => {
     // Generate summary
     const summaryData = await generatePDFSummary(text, conversation.fileName);
 
-    // Update conversation with summary
+    // Process summary content for formatting
+    const processedSummary = await processSummaryContent(summaryData);
+
+    // Update conversation with summary and formatted content
     const updatedConversation = await prisma.conversation.update({
       where: { id: conversationId },
       data: {
         summary: summaryData.summary,
+        summaryFormatted: processedSummary.summaryFormatted,
         keyFindings: summaryData.keyFindings,
+        keyFindingsFormatted: processedSummary.keyFindingsFormatted,
         introduction: summaryData.introduction,
+        introductionFormatted: processedSummary.introductionFormatted,
         tableOfContents: summaryData.tableOfContents,
-        summaryGeneratedAt: new Date()
+        tableOfContentsFormatted: processedSummary.tableOfContentsFormatted,
+        summaryContentType: processedSummary.summaryContentType || 'html',
+        summaryGeneratedAt: new Date(),
+        summaryProcessedAt: processedSummary.summaryProcessedAt
       },
       select: {
         id: true,
         title: true,
         fileName: true,
         summary: true,
+        summaryFormatted: true,
         keyFindings: true,
+        keyFindingsFormatted: true,
         introduction: true,
+        introductionFormatted: true,
         tableOfContents: true,
+        tableOfContentsFormatted: true,
+        summaryContentType: true,
         summaryGeneratedAt: true,
+        summaryProcessedAt: true,
         createdAt: true
       }
     });
 
-    res.json(updatedConversation);
+    // Return formatted content for frontend
+    const responseData = {
+      ...updatedConversation,
+      summary: updatedConversation.summaryFormatted || updatedConversation.summary,
+      keyFindings: updatedConversation.keyFindingsFormatted || updatedConversation.keyFindings,
+      introduction: updatedConversation.introductionFormatted || updatedConversation.introduction,
+      tableOfContents: updatedConversation.tableOfContentsFormatted || updatedConversation.tableOfContents,
+      originalSummary: updatedConversation.summary,
+      originalKeyFindings: updatedConversation.keyFindings,
+      originalIntroduction: updatedConversation.introduction,
+      originalTableOfContents: updatedConversation.tableOfContents
+    };
+
+    res.json(responseData);
   } catch (error) {
     console.error('Error generating summary:', error);
     res.status(500).json({ 

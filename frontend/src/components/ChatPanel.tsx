@@ -5,12 +5,16 @@ import type React from "react"
 import { useState, useEffect, useCallback, useRef } from "react"
 import { getConversationMessages, sendChatMessage } from "@/services/api"
 import { Send, Bot, User, Sparkles } from "lucide-react"
+import HtmlRenderer from "./HtmlRenderer"
 
 interface Message {
   id: string
   text: string
+  originalText?: string
+  contentType?: 'text' | 'html' | 'markdown'
   isUser: boolean
   timestamp: Date
+  processedAt?: Date
 }
 
 interface ChatPanelProps {
@@ -221,7 +225,7 @@ export default function ChatPanel({ conversationId, pdfTitle }: ChatPanelProps) 
                     }}
                   >
                     <div 
-                      className="text-sm leading-relaxed whitespace-pre-wrap font-medium w-full" 
+                      className="text-sm leading-relaxed font-medium w-full" 
                       style={{ 
                         wordBreak: 'break-word', 
                         overflowWrap: 'break-word',
@@ -229,7 +233,11 @@ export default function ChatPanel({ conversationId, pdfTitle }: ChatPanelProps) 
                         hyphens: 'auto'
                       }}
                     >
-                      {message.text}
+                      <HtmlRenderer 
+                        content={message.text}
+                        contentType={message.contentType || 'text'}
+                        isUserMessage={message.isUser}
+                      />
                     </div>
                   </div>
                 </div>

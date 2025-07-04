@@ -2,6 +2,7 @@ const express = require('express');
 const { getEmbedding } = require('../services/embedding');
 const { queryEmbedding } = require('../services/pinecone');
 const { askGpt } = require('../services/gpt');
+const { processMessageContent, cleanTextContent } = require('../services/messageProcessor');
 const prisma = require('../prismaClient');
 
 const router = express.Router();
@@ -29,9 +30,12 @@ router.get('/:conversationId', async (req, res) => {
     // Transform messages to frontend format
     const formattedMessages = messages.map(message => ({
       id: message.id,
-      text: message.text,
+      text: message.formattedText || message.text, // Use formatted content if available
+      originalText: message.text,
+      contentType: message.contentType || 'text',
       isUser: message.role === 'user',
-      timestamp: message.createdAt
+      timestamp: message.createdAt,
+      processedAt: message.processedAt
     }));
 
     res.json(formattedMessages);
@@ -49,8 +53,19 @@ router.post('/:conversationId', async (req, res) => {
 
     console.log('Received question:', question);
 
+    // Clean and process user message
+    const cleanedQuestion = cleanTextContent(question);
+    const processedUserMessage = await processMessageContent(cleanedQuestion, 'user');
+
     const userMessage = await prisma.message.create({
-      data: { conversationId, role: 'user', text: question }
+      data: { 
+        conversationId, 
+        role: 'user', 
+        text: cleanedQuestion,
+        formattedText: processedUserMessage.formatted,
+        contentType: processedUserMessage.contentType,
+        processedAt: processedUserMessage.processedAt
+      }
     });
 
     const questionEmbedding = await getEmbedding(question);
@@ -73,30 +88,56 @@ router.post('/:conversationId', async (req, res) => {
     if (!context) {
       const errorMessage = "I couldn't find any relevant information in the document to answer your question. Please try asking about something else or rephrase your question.";
       
+      // Process error message
+      const processedError = await processMessageContent(errorMessage, 'assistant');
+      
       const assistantMessage = await prisma.message.create({
-        data: { conversationId, role: 'assistant', text: errorMessage }
+        data: { 
+          conversationId, 
+          role: 'assistant', 
+          text: errorMessage,
+          formattedText: processedError.formatted,
+          contentType: processedError.contentType,
+          processedAt: processedError.processedAt
+        }
       });
 
       return res.json({
         id: assistantMessage.id,
-        text: errorMessage,
+        text: processedError.formatted,
+        originalText: errorMessage,
+        contentType: processedError.contentType,
         isUser: false,
-        timestamp: assistantMessage.createdAt
+        timestamp: assistantMessage.createdAt,
+        processedAt: processedError.processedAt
       });
     }
 
     const answer = await askGpt(question, context);
 
+    // Process the AI response
+    const processedAnswer = await processMessageContent(answer, 'assistant');
+
     const assistantMessage = await prisma.message.create({
-      data: { conversationId, role: 'assistant', text: answer }
+      data: { 
+        conversationId, 
+        role: 'assistant', 
+        text: answer,
+        formattedText: processedAnswer.formatted,
+        contentType: processedAnswer.contentType,
+        processedAt: processedAnswer.processedAt
+      }
     });
 
     // Return message in frontend format
     res.json({
       id: assistantMessage.id,
-      text: answer,
+      text: processedAnswer.formatted,
+      originalText: answer,
+      contentType: processedAnswer.contentType,
       isUser: false,
-      timestamp: assistantMessage.createdAt
+      timestamp: assistantMessage.createdAt,
+      processedAt: processedAnswer.processedAt
     });
   } catch (error) {
     console.error('Error in chat route:', error);

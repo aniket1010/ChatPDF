@@ -13,10 +13,16 @@ model Conversation {
   fileName  String
   filePath  String
   summary   String?   // AI-generated abstract/summary
+  summaryFormatted String? // Formatted summary (HTML)
   keyFindings String? // Key findings from the document
+  keyFindingsFormatted String? // Formatted key findings (HTML)
   introduction String? // Introduction overview
+  introductionFormatted String? // Formatted introduction (HTML)
   tableOfContents String? // Extracted table of contents
+  tableOfContentsFormatted String? // Formatted table of contents (HTML)
+  summaryContentType String @default("text") // Content type for summary fields
   summaryGeneratedAt DateTime? // When summary was generated
+  summaryProcessedAt DateTime? // When summary was processed/formatted
   createdAt DateTime  @default(now())
   messages  Message[]
 }
@@ -24,7 +30,10 @@ model Conversation {
 model Message {
   id             String      @id @default(cuid())
   role           String
-  text           String
+  text           String      // Original/raw content
+  formattedText  String?     // Processed/formatted content (HTML or markdown)
+  contentType    String      @default("text") // "text", "markdown", "html"
+  processedAt    DateTime?   // When content was processed
   createdAt      DateTime    @default(now())
   conversation   Conversation @relation(fields: [conversationId], references: [id])
   conversationId String

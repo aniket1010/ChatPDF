@@ -5,6 +5,7 @@ import { Loader2, RefreshCw, AlertTriangle } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { getConversationSummary, generateConversationSummary } from "@/services/api"
+import HtmlRenderer from "./HtmlRenderer"
 
 interface SummaryData {
   id: string
@@ -12,6 +13,9 @@ interface SummaryData {
   fileName: string
   summary: string | null
   keyFindings: string | null
+  originalSummary?: string
+  originalKeyFindings?: string
+  summaryContentType?: string
   createdAt: string
 }
 
@@ -129,12 +133,12 @@ export default function PDFSummaryPage({ conversationId }: PDFSummaryPageProps) 
         )}
       </AnimatePresence>
 
-      <div className="h-full flex flex-col max-w-6xl mx-auto">
-        {/* Document Container */}
-        <div className="m-8 bg-white border-4 border-black flex flex-col min-h-[calc(100vh-4rem)]">
+             <div className="h-full flex flex-col max-w-6xl mx-auto">
+         {/* Document Container */}
+         <div className="m-4 mb-0 bg-white border-2 border-black border-b-0 flex flex-col min-h-[calc(100vh-4rem)]">
           {/* Header Section */}
           <motion.div
-            className="text-center pt-12 pb-8 px-8"
+            className="text-center pt-8 pb-4 px-4"
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.8 }}
@@ -163,7 +167,7 @@ export default function PDFSummaryPage({ conversationId }: PDFSummaryPageProps) 
           </motion.div>
 
           {/* Content Section */}
-          <div className="flex-1 px-8 pb-8 space-y-8">
+          <div className="flex-1 px-4 pb-4 space-y-4">
             {/* Summary Section */}
             <motion.div
               className="border-2 border-black p-6"
@@ -172,8 +176,14 @@ export default function PDFSummaryPage({ conversationId }: PDFSummaryPageProps) 
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 1.2 }}
             >
-                             <h2 className="text-xl font-bold text-black mb-4 tracking-wide">SUMMARY</h2>
-               <p className="text-black/80 leading-relaxed text-sm">{summaryData.summary}</p>
+              <h2 className="text-xl font-bold text-black mb-4 tracking-wide">SUMMARY</h2>
+              <div className="text-black/80 leading-relaxed text-sm">
+                <HtmlRenderer 
+                  content={summaryData.summary || ''}
+                  contentType={summaryData.summaryContentType as any || 'text'}
+                  className="summary-content"
+                />
+              </div>
             </motion.div>
 
             {/* Key Findings Section */}
@@ -194,7 +204,13 @@ export default function PDFSummaryPage({ conversationId }: PDFSummaryPageProps) 
                     transition={{ duration: 0.6, delay: 1.6 + index * 0.1 }}
                   >
                     <span className="text-black font-bold mt-1">→</span>
-                                         <p className="text-black/80 text-sm font-medium tracking-wide">{finding}</p>
+                    <div className="text-black/80 text-sm font-medium tracking-wide">
+                      <HtmlRenderer 
+                        content={finding}
+                        contentType={summaryData.summaryContentType as any || 'text'}
+                        className="finding-content"
+                      />
+                    </div>
                   </motion.div>
                 ))}
               </div>

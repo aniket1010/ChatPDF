@@ -5,6 +5,7 @@ const prisma = require('../prismaClient');
 const { getEmbedding } = require('../services/embedding');
 const { upsertEmbedding } = require('../services/pinecone');
 const { generatePDFSummary } = require('../services/pdfSummary');
+const { processSummaryContent } = require('../services/messageProcessor');
 const { validatePDF } = require('../middleware/validation');
 const path = require('path');
 const fs = require('fs');
@@ -60,11 +61,18 @@ router.post('/', upload.single('file'), validatePDF, async (req, res) => {
     // Generate PDF summary
     console.log('Generating PDF summary...');
     let summaryData = {};
+    let processedSummary = {};
     try {
       summaryData = await generatePDFSummary(text, originalName);
       console.log('PDF summary generated successfully');
+      
+      // Process summary content for formatting
+      if (summaryData.summary) {
+        processedSummary = await processSummaryContent(summaryData);
+        console.log('PDF summary processed and formatted successfully');
+      }
     } catch (error) {
-      console.error('Failed to generate summary, proceeding without it:', error);
+      console.error('Failed to generate/process summary, proceeding without it:', error);
     }
 
     // Save conversation with file path and summary
@@ -74,10 +82,16 @@ router.post('/', upload.single('file'), validatePDF, async (req, res) => {
         fileName: originalName,
         filePath: filePath,
         summary: summaryData.summary || null,
+        summaryFormatted: processedSummary.summaryFormatted || null,
         keyFindings: summaryData.keyFindings || null,
+        keyFindingsFormatted: processedSummary.keyFindingsFormatted || null,
         introduction: summaryData.introduction || null,
+        introductionFormatted: processedSummary.introductionFormatted || null,
         tableOfContents: summaryData.tableOfContents || null,
-        summaryGeneratedAt: summaryData.summary ? new Date() : null
+        tableOfContentsFormatted: processedSummary.tableOfContentsFormatted || null,
+        summaryContentType: processedSummary.summaryContentType || 'text',
+        summaryGeneratedAt: summaryData.summary ? new Date() : null,
+        summaryProcessedAt: processedSummary.summaryProcessedAt || null
       }
     });
     console.log('Created conversation:', conversation.id);

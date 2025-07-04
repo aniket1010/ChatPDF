@@ -1,12 +1,14 @@
 /* Hide PDF scrollbars but maintain full functionality */
 .rpv-core__inner-pages {
-  /* Prevent scrolling on the body when the page has a scrollbar */
-  overscroll-behavior: contain;
+  /* Disable internal scrolling to allow parent container to handle it */
+  overflow: visible !important;
   /* Hide scrollbar but keep scrolling functionality */
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
   /* Ensure smooth scrolling */
   scroll-behavior: smooth !important;
+  height: auto !important;
+  background-color: white !important;
 }
 
 .rpv-core__inner-pages::-webkit-scrollbar {
@@ -15,14 +17,13 @@
 
 /* Ensure consistent background for PDF viewer */
 .rpv-core__viewer {
-  background-color: #F9F4EB !important;
+  background-color: white !important;
+  border: none !important;
+  overflow: visible !important;
+  height: auto !important;
   /* Hide scrollbar but keep functionality */
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
-  /* Remove any height constraints that could interfere with parent scrolling */
-  height: auto !important;
-  min-height: auto !important;
-  max-height: none !important;
 }
 
 .rpv-core__viewer::-webkit-scrollbar {
@@ -32,22 +33,21 @@
 .rpv-core__inner-pages {
   background-color: #F9F4EB !important;
   padding: 0 !important;
-  /* Ensure natural height flow */
-  height: auto !important;
-  min-height: auto !important;
-  max-height: none !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
 }
 
 .rpv-core__page-layer {
   background-color: white !important;
   box-shadow: none !important;
   margin: 0 auto !important;
-  max-width: 100% !important;
   border: none !important;
   margin-bottom: 0 !important;
   margin-top: 0 !important;
-  width: 8.5in !important;
-  max-width: 8.5in !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
 }
 
 /* Remove spacing between pages for seamless experience */
@@ -58,8 +58,12 @@
 
 /* Remove any default padding/margins */
 .rpv-core__inner-page {
-  margin: 0 !important;
-  padding: 0 !important;
+  margin-bottom: 0 !important;
+  box-shadow: none !important;
+  border: none !important;
+  background-color: white !important;
+  overflow: visible !important;
+  pointer-events: auto !important;
 }
 
 /* Ensure pages are flush with each other */
@@ -79,10 +83,11 @@
 
 /* Remove borders and spacing from PDF container */
 .rpv-core__doc {
+  overflow: visible !important;
+  height: auto !important;
   margin: 0 !important;
   padding: 0 !important;
   /* Ensure natural height flow */
-  height: auto !important;
   min-height: auto !important;
   max-height: none !important;
 }
@@ -100,13 +105,13 @@
   padding-top: 0 !important;
 }
 
-/* Ensure consistent page width matching summary */
+/* Ensure consistent page width - responsive and centered */
 .rpv-core__page-layer,
 .rpv-core__page-layer canvas,
 .rpv-core__page {
-  width: 8.5in !important;
-  max-width: 8.5in !important;
-  min-width: 8.5in !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: auto !important;
 }
 
 /* Ensure the entire PDF container flows naturally without internal scrolling */
@@ -115,23 +120,114 @@
   min-height: auto !important;
   max-height: none !important;
   overflow: visible !important;
+  /* Allow scroll events to bubble up */
+  pointer-events: auto !important;
 }
 
 /* Remove any fixed heights that could cause scrolling conflicts */
 .rpv-core__viewer-container {
+  position: relative !important;
   height: auto !important;
-  min-height: auto !important;
-  max-height: none !important;
   overflow: visible !important;
 }
 
+/* Ensure toolbar doesn't interfere */
+.rpv-core__toolbar {
+  display: none !important;
+}
+
+/* Make sure page container allows natural flow */
+.rpv-core__page-container {
+  overflow: visible !important;
+  height: auto !important;
+  position: relative !important;
+}
+
 .pdf-nav-input {
-  /* Remove the arrows from the number input */
-  -moz-appearance: textfield;
+  background: transparent !important;
+  color: white !important;
+  border: none !important;
+  outline: none !important;
 }
 
 .pdf-nav-input::-webkit-outer-spin-button,
 .pdf-nav-input::-webkit-inner-spin-button {
   -webkit-appearance: none;
   margin: 0;
+}
+
+.pdf-nav-input[type=number] {
+  -moz-appearance: textfield;
+}
+
+/* Ensure all PDF elements allow scroll events to bubble up */
+.rpv-core__page-layer,
+.rpv-core__page,
+.rpv-core__inner-page,
+.rpv-core__doc {
+  /* Allow scroll events to pass through to parent */
+  overflow: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Ensure PDF canvas elements don't block scrolling */
+.rpv-core__page-layer canvas {
+  pointer-events: auto !important;
+}
+
+.rpv-core__canvas-layer,
+.rpv-core__text-layer,
+.rpv-core__annotation-layer {
+  overflow: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Aggressively remove all borders from PDF container only */
+.rpv-core__inner-pages * {
+  border: none !important;
+  border-top: none !important;
+  border-bottom: none !important;
+  border-left: none !important;
+  border-right: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Target PDF.js specific elements */
+div[data-page-number],
+div[data-page-number] *,
+.page,
+.page *,
+canvas {
+  border: none !important;
+  box-shadow: none !important;
+  outline: none !important;
+}
+
+/* Remove any background that might create visual separation */
+.rpv-core__inner-pages {
+  background: white !important;
+}
+
+.rpv-core__page-layer {
+  background: white !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Hide PDF page boundaries completely */
+.rpv-core__page-layer::before,
+.rpv-core__page-layer::after,
+.rpv-core__inner-page::before,
+.rpv-core__inner-page::after {
+  display: none !important;
+  content: none !important;
+}
+
+/* Ensure canvas elements touch each other */
+.rpv-core__page-layer canvas {
+  margin: 0 !important;
+  padding: 0 !important;
+  vertical-align: top !important;
+  display: block !important;
 } 

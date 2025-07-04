@@ -5,4 +5,6 @@ export { default as ChatPanel } from './ChatPanel';
 export { default as MobileLayout } from './MobileLayout';
 export { default as ResponsiveLayout } from './ResponsiveLayout';
 export { default as ResizableLayout } from './ResizableLayout';
-export { default as PDFSummaryPage } from './PDFSummaryPage'; 
+export { default as PDFSummaryPage } from './PDFSummaryPage';
+export { default as MarkdownRenderer } from './MarkdownRenderer';
+export { default as HtmlRenderer } from './HtmlRenderer'; 

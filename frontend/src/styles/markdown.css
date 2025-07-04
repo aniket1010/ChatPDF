@@ -1,0 +1,114 @@
+/* Markdown Content Styling */
+.markdown-content {
+  line-height: 1.6;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+.markdown-content p {
+  margin-bottom: 0.5rem;
+}
+
+.markdown-content p:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content ul,
+.markdown-content ol {
+  margin-bottom: 0.5rem;
+  padding-left: 1rem;
+}
+
+.markdown-content li {
+  margin-bottom: 0.25rem;
+}
+
+.markdown-content li:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content h1,
+.markdown-content h2,
+.markdown-content h3 {
+  line-height: 1.25;
+}
+
+.markdown-content h1:first-child,
+.markdown-content h2:first-child,
+.markdown-content h3:first-child {
+  margin-top: 0;
+}
+
+.markdown-content code {
+  font-family: 'SF Mono', 'Monaco', 'Inconsolata', 'Roboto Mono', 'Consolas', monospace;
+  font-size: 0.875em;
+}
+
+.markdown-content pre {
+  margin: 0.5rem 0;
+  border-radius: 0.375rem;
+  overflow-x: auto;
+}
+
+.markdown-content pre:first-child {
+  margin-top: 0;
+}
+
+.markdown-content pre:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content blockquote {
+  margin: 0.5rem 0;
+}
+
+.markdown-content blockquote:first-child {
+  margin-top: 0;
+}
+
+.markdown-content blockquote:last-child {
+  margin-bottom: 0;
+}
+
+.markdown-content table {
+  font-size: 0.875rem;
+}
+
+.markdown-content hr {
+  margin: 0.75rem 0;
+}
+
+.markdown-content hr:first-child {
+  margin-top: 0;
+}
+
+.markdown-content hr:last-child {
+  margin-bottom: 0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .markdown-content {
+    font-size: 0.875rem;
+  }
+  
+  .markdown-content h1 {
+    font-size: 1rem;
+  }
+  
+  .markdown-content h2 {
+    font-size: 0.95rem;
+  }
+  
+  .markdown-content h3 {
+    font-size: 0.9rem;
+  }
+  
+  .markdown-content code {
+    font-size: 0.8rem;
+  }
+  
+  .markdown-content pre {
+    font-size: 0.75rem;
+  }
+} 
