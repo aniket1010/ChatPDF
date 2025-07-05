@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState, useEffect, useCallback, useRef } from "react"
 import { getConversationMessages, sendChatMessage } from "@/services/api"
-import { Send, Bot, User, Sparkles } from "lucide-react"
+import { Send, Bot, User, Sparkles, Menu, FileText } from "lucide-react"
 import HtmlRenderer from "./HtmlRenderer"
 
 interface Message {
@@ -20,9 +20,12 @@ interface Message {
 interface ChatPanelProps {
   conversationId: string
   pdfTitle?: string
+  onToggleSidebar?: () => void
+  onViewPDF?: () => void
+  showMobileControls?: boolean
 }
 
-export default function ChatPanel({ conversationId, pdfTitle }: ChatPanelProps) {
+export default function ChatPanel({ conversationId, pdfTitle, onToggleSidebar, onViewPDF, showMobileControls }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([])
   const [inputMessage, setInputMessage] = useState("")
   const [isLoading, setIsLoading] = useState(false)
@@ -112,6 +115,14 @@ export default function ChatPanel({ conversationId, pdfTitle }: ChatPanelProps) 
       <div className="px-4 sm:px-6 py-4 sm:py-5 bg-white/80 backdrop-blur-sm border-b border-black/10 flex-shrink-0 shadow-sm">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3 sm:gap-4">
+            {showMobileControls && onToggleSidebar && (
+              <button
+                onClick={onToggleSidebar}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <Menu className="w-5 h-5 text-gray-600" />
+              </button>
+            )}
             <div className="relative">
               <div
                 className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl flex items-center justify-center shadow-lg"
@@ -131,6 +142,15 @@ export default function ChatPanel({ conversationId, pdfTitle }: ChatPanelProps) 
               </h2>
             </div>
           </div>
+          {showMobileControls && onViewPDF && (
+            <button
+              onClick={onViewPDF}
+              className="flex items-center gap-2 px-4 py-2 btn-secondary rounded-xl hover:shadow-md transition-all duration-200 group"
+            >
+              <FileText className="w-4 h-4 transition-transform duration-200 group-hover:scale-110" />
+              <span className="text-sm font-medium">View PDF</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -221,7 +241,7 @@ export default function ChatPanel({ conversationId, pdfTitle }: ChatPanelProps) 
                       wordBreak: 'break-word',
                       overflowWrap: 'break-word',
                       overflow: 'hidden',
-                      ...(!message.isUser ? { backgroundColor: "#F9F4EB", color: "black" } : {})
+                      ...(!message.isUser ? { backgroundColor: "#F6F5F2", color: "black" } : {})
                     }}
                   >
                     <div 

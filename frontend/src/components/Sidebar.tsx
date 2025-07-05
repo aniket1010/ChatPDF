@@ -18,9 +18,11 @@ interface Conversation {
 interface MinimalistSidebarProps {
   selectedConversation?: string | null
   onSelectConversation?: (id: string) => void
+  onClose?: () => void
+  isMobile?: boolean
 }
 
-export default function Sidebar({ selectedConversation, onSelectConversation }: MinimalistSidebarProps = {}) {
+export default function Sidebar({ selectedConversation, onSelectConversation, onClose, isMobile }: MinimalistSidebarProps = {}) {
   const router = useRouter()
   const pathname = usePathname()
   const [isExpanded, setIsExpanded] = useState(true)
@@ -75,16 +77,16 @@ export default function Sidebar({ selectedConversation, onSelectConversation }: 
 
   return (
     <div
-      className={`bg-[#F9F4EB] border-r border-black/10 transition-all duration-300 ease-out ${
-        isExpanded ? "w-80" : "w-16"
-      } flex flex-col h-full shadow-sm`}
+      className={`bg-[#F6F5F2] border-r border-black/10 transition-all duration-500 ease-in-out ${
+        isMobile ? "w-full" : (isExpanded ? "w-80" : "w-16")
+      } flex flex-col h-full shadow-sm ${isMobile ? "animate-fade-in" : ""}`}
     >
       {/* Header */}
-      <div className={`border-b border-black/10 ${isExpanded ? "px-6 py-6" : "px-3 py-6"}`}>
-        <div className={`flex items-center ${isExpanded ? "justify-between" : "justify-center"}`}>
+      <div className={`border-b border-black/10 transition-all duration-500 ease-in-out ${isExpanded ? "px-6 py-6" : "px-3 py-6"}`}>
+        <div className={`flex items-center transition-all duration-500 ease-in-out ${isExpanded ? "justify-between" : "justify-center"}`}>
           {isExpanded && (
             <div
-              className="cursor-pointer transition-opacity duration-200 hover:opacity-80"
+              className="cursor-pointer transition-all duration-300 hover:opacity-80 animate-fade-in"
               onClick={() => router.push("/")}
             >
               <h1 className="text-2xl font-bold text-black mb-1 tracking-tight">ChatPDF</h1>
@@ -92,30 +94,32 @@ export default function Sidebar({ selectedConversation, onSelectConversation }: 
             </div>
           )}
           <button
-            className="w-10 h-10 rounded-lg hover:bg-black/5 transition-colors duration-200 flex items-center justify-center text-black/70 hover:text-black"
-            onClick={() => setIsExpanded(!isExpanded)}
-            aria-label={isExpanded ? "Collapse sidebar" : "Expand sidebar"}
+            className="w-10 h-10 rounded-lg hover:bg-black/5 transition-all duration-300 ease-in-out flex items-center justify-center text-black/70 hover:text-black hover:scale-110 active:scale-95"
+            onClick={isMobile && onClose ? onClose : () => setIsExpanded(!isExpanded)}
+            aria-label={isMobile ? "Close sidebar" : (isExpanded ? "Collapse sidebar" : "Expand sidebar")}
           >
-            {isExpanded ? <PanelLeft className="h-5 w-5" /> : <PanelRight className="h-5 w-5" />}
+            <div className="transition-transform duration-300 ease-in-out">
+              {isExpanded ? <PanelLeft className="h-5 w-5" /> : <PanelRight className="h-5 w-5" />}
+            </div>
           </button>
         </div>
       </div>
 
       {isExpanded ? (
-        <>
+        <div className="animate-fade-in">
           {/* New Chat Button */}
-          <div className="p-6 pb-4">
+          <div className="p-6 pb-4 animate-slide-up">
             <Button
               onClick={handleNewChat}
-              className="w-full bg-black hover:bg-black/90 text-white h-11 rounded-xl font-medium transition-all duration-200 hover:shadow-md active:scale-[0.98]"
+              className="w-full bg-black hover:bg-black/90 text-white h-11 rounded-xl font-medium transition-all duration-300 hover:shadow-lg hover:scale-105 active:scale-95"
             >
-              <Plus className="h-4 w-4 mr-2" />
+              <Plus className="h-4 w-4 mr-2 transition-transform duration-300" />
               New Chat
             </Button>
           </div>
 
           {/* Recent Chats Header */}
-          <div className="px-6 pb-4">
+          <div className="px-6 pb-4 animate-slide-up [animation-delay:0.1s]">
             <h2 className="text-sm font-semibold text-black/80">Recent Chats</h2>
           </div>
 
@@ -176,7 +180,7 @@ export default function Sidebar({ selectedConversation, onSelectConversation }: 
               )}
             </div>
           </ScrollArea>
-        </>
+        </div>
       ) : (
         <>
           {/* Collapsed New Chat Button */}

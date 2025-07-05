@@ -47,9 +47,10 @@ interface PreviewPDFProps {
   currentPage?: number;
   onPdfLoad?: (totalPages: number) => void;
   onPageChange?: (page: number) => void;
+  isNavigationAction?: boolean;
 }
 
-export default function PreviewPDF({ conversationId, currentPage = 1, onPdfLoad, onPageChange }: PreviewPDFProps) {
+export default function PreviewPDF({ conversationId, currentPage = 1, onPdfLoad, onPageChange, isNavigationAction = false }: PreviewPDFProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [viewState, setViewState] = useState<ViewState>('idle');
   const [isClient, setIsClient] = useState(false);
@@ -102,10 +103,13 @@ export default function PreviewPDF({ conversationId, currentPage = 1, onPdfLoad,
 
   // ✅ Simplified: This callback's only job is to report page changes.
   const handlePageChange = useCallback((e: { currentPage: number }) => {
-    const newPage = e.currentPage + 1; // Convert from 0-based to 1-based
-    console.log('PreviewPDF: Page change event received:', newPage);
+    const newPage = e.currentPage; // Already 1-based from PdfViewerCore
+    console.log('PreviewPDF: Page change event received:', newPage, 'calling parent onPageChange');
     if (onPageChange) {
       onPageChange(newPage);
+      console.log('PreviewPDF: Called parent onPageChange with:', newPage);
+    } else {
+      console.log('PreviewPDF: No onPageChange callback provided');
     }
   }, [onPageChange]);
 
@@ -159,6 +163,7 @@ export default function PreviewPDF({ conversationId, currentPage = 1, onPdfLoad,
               currentPage={currentPage}
               onPageChange={handlePageChange}
               onDocumentLoadSuccess={handleDocumentLoadSuccess}
+              isNavigationAction={isNavigationAction}
             />
           </div>
         )}

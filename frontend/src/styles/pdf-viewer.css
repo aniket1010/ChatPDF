@@ -5,10 +5,11 @@
   /* Hide scrollbar but keep scrolling functionality */
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
-  /* Ensure smooth scrolling */
-  scroll-behavior: smooth !important;
   height: auto !important;
   background-color: white !important;
+  /* Enhanced scroll positioning */
+  scroll-padding-top: 20px !important;
+  scroll-margin-top: 20px !important;
 }
 
 .rpv-core__inner-pages::-webkit-scrollbar {
@@ -24,6 +25,8 @@
   /* Hide scrollbar but keep functionality */
   scrollbar-width: none !important;
   -ms-overflow-style: none !important;
+  /* Enhanced scrolling performance */
+  -webkit-overflow-scrolling: touch !important;
 }
 
 .rpv-core__viewer::-webkit-scrollbar {
@@ -48,6 +51,9 @@
   display: flex !important;
   justify-content: center !important;
   align-items: center !important;
+  /* Enhanced scroll positioning for individual pages */
+  scroll-margin-top: 20px !important;
+  scroll-padding-top: 20px !important;
 }
 
 /* Remove spacing between pages for seamless experience */

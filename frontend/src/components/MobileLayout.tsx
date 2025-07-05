@@ -49,7 +49,7 @@ export default function MobileLayout({ conversationId, pdfTitle }: MobileLayoutP
                 <Menu size={20} className="text-gray-600" />
               </button>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-gradient-to-br from-pink-200 to-amber-200 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: "#C0C9EE" }}>
                   <FileText className="w-4 h-4 text-gray-700" />
                 </div>
                 <h2 className="text-lg font-semibold text-gray-800">Document</h2>
@@ -70,26 +70,10 @@ export default function MobileLayout({ conversationId, pdfTitle }: MobileLayoutP
           </div>
         </div>
 
-        {/* Mobile Sidebar Overlay */}
+        {/* Mobile Sidebar Full Screen */}
         {showSidebar && (
-          <div className="fixed inset-0 z-50 bg-black bg-opacity-50" onClick={handleToggleSidebar}>
-            <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-lg" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center justify-between p-4 border-b border-gray-200">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 bg-gradient-to-br from-pink-200 to-amber-200 rounded-lg flex items-center justify-center">
-                    <Sparkles className="w-3 h-3 text-gray-700" />
-                  </div>
-                  <h3 className="text-lg font-semibold text-gray-800">Menu</h3>
-                </div>
-                <button
-                  onClick={handleToggleSidebar}
-                  className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-                >
-                  <X size={20} className="text-gray-600" />
-                </button>
-              </div>
-              <Sidebar />
-            </div>
+          <div className="fixed inset-0 z-50 bg-white animate-slide-in-left">
+            <Sidebar onClose={handleToggleSidebar} isMobile={true} />
           </div>
         )}
       </>
@@ -99,60 +83,22 @@ export default function MobileLayout({ conversationId, pdfTitle }: MobileLayoutP
   return (
     <>
       <div className="flex flex-col h-full bg-gradient-to-br from-white to-gray-50">
-        {/* Chat Header with View PDF Button */}
-        <div className="flex items-center justify-between p-4 bg-white border-b border-gray-200 shadow-sm">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleToggleSidebar}
-              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Menu size={20} className="text-gray-600" />
-            </button>
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-gradient-to-br from-pink-200 to-amber-200 rounded-lg flex items-center justify-center">
-                <MessageCircle className="w-4 h-4 text-gray-700" />
-              </div>
-              <div>
-                <h2 className="text-lg font-semibold text-gray-800">Chat</h2>
-                <p className="text-xs text-gray-500">Ask questions about your document</p>
-              </div>
-            </div>
-          </div>
-          <button
-            onClick={handleViewPDF}
-            className="flex items-center gap-2 px-4 py-2 btn-secondary rounded-xl hover:shadow-md transition-all duration-200 group"
-          >
-            <FileText size={18} className="transition-transform duration-200 group-hover:scale-110" />
-            <span className="text-sm font-medium">View PDF</span>
-          </button>
-        </div>
-
-        {/* Chat Panel */}
+        {/* Chat Panel with integrated header */}
         <div className="flex-1 overflow-hidden">
-          <ChatPanel conversationId={conversationId} pdfTitle={pdfTitle} />
+          <ChatPanel 
+            conversationId={conversationId} 
+            pdfTitle={pdfTitle}
+            onToggleSidebar={handleToggleSidebar}
+            onViewPDF={handleViewPDF}
+            showMobileControls={true}
+          />
         </div>
       </div>
 
-      {/* Mobile Sidebar Overlay */}
+      {/* Mobile Sidebar Full Screen */}
       {showSidebar && (
-        <div className="fixed inset-0 z-50 bg-black bg-opacity-50" onClick={handleToggleSidebar}>
-          <div className="fixed left-0 top-0 h-full w-80 bg-white shadow-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 bg-gradient-to-br from-pink-200 to-amber-200 rounded-lg flex items-center justify-center">
-                  <Sparkles className="w-3 h-3 text-gray-700" />
-                </div>
-                <h3 className="text-lg font-semibold text-gray-800">Menu</h3>
-              </div>
-              <button
-                onClick={handleToggleSidebar}
-                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
-              >
-                <X size={20} className="text-gray-600" />
-              </button>
-            </div>
-            <Sidebar />
-          </div>
+        <div className="fixed inset-0 z-50 bg-white animate-slide-in-left">
+          <Sidebar onClose={handleToggleSidebar} isMobile={true} />
         </div>
       )}
     </>
