@@ -16,11 +16,31 @@ export default function SeamlessDocumentViewer({ conversationId, pdfTitle }: Sea
   const [mouseInside, setMouseInside] = useState(false);
   const [isNavigationAction, setIsNavigationAction] = useState(false);
   const [inputValue, setInputValue] = useState('1');
+  const [isLoadingConversation, setIsLoadingConversation] = useState(false);
+  const [prevConversationId, setPrevConversationId] = useState<string | null>(null);
 
   // Debug currentPage changes
   useEffect(() => {
     console.log('SeamlessDocumentViewer: currentPage state changed to:', currentPage);
   }, [currentPage]);
+
+  // Handle conversation switching with loading state
+  useEffect(() => {
+    if (conversationId && conversationId !== prevConversationId) {
+      setIsLoadingConversation(true);
+      setPrevConversationId(conversationId);
+      // Reset page to 1 when switching conversations
+      setCurrentPage(1);
+      setInputValue('1');
+      
+      // Fallback timeout to hide loader if PDF doesn't load properly
+      const timeout = setTimeout(() => {
+        setIsLoadingConversation(false);
+      }, 10000); // 10 seconds timeout
+      
+      return () => clearTimeout(timeout);
+    }
+  }, [conversationId, prevConversationId]);
 
   // Handle mouse enter/leave for the component
   const handleMouseEnter = useCallback(() => {
@@ -121,25 +141,60 @@ export default function SeamlessDocumentViewer({ conversationId, pdfTitle }: Sea
   // Calculate total pages
   const displayTotalPages = totalPdfPages;
 
+  // Simple loader component
+  const ConversationLoader = () => (
+    <div className="absolute inset-0 z-50 flex items-center justify-center bg-[#F6F5F2]/90">
+      <div className="flex flex-col items-center gap-3 p-6 bg-white rounded-2xl shadow-sm">
+        <div className="w-5 h-5 border-2 border-black/20 border-t-black/60 rounded-full animate-spin"></div>
+        <p className="text-sm text-black/70">Loading...</p>
+      </div>
+    </div>
+  );
+
   return (
     <div 
       className="relative w-full h-full" 
-      style={{ backgroundColor: '#F9F4EB' }}
+      style={{ 
+        backgroundColor: '#F9F4EB',
+        contain: 'layout style paint size',
+        isolation: 'isolate',
+      }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
       onMouseMove={handleMouseMove}
     >
 
+      {/* Conversation Loader */}
+      {isLoadingConversation && <ConversationLoader />}
+
       {/* PDF Container */}
-      <div className="w-full h-full" style={{ backgroundColor: '#F6F5F2' }}>
-        <div className="w-full h-full p-4">
-          <div className="w-full h-full bg-white rounded-lg shadow-sm overflow-hidden">
+      <div 
+        className="w-full h-full" 
+        style={{ 
+          backgroundColor: '#F6F5F2',
+          contain: 'layout style paint',
+        }}
+      >
+        <div 
+          className="w-full h-full p-4"
+          style={{
+            contain: 'layout style',
+          }}
+        >
+          <div 
+            className="w-full h-full bg-white rounded-lg shadow-sm overflow-hidden"
+            style={{
+              contain: 'layout style paint size',
+              isolation: 'isolate',
+            }}
+          >
             <PreviewPDF 
               conversationId={conversationId}
               currentPage={currentPage}
               isNavigationAction={isNavigationAction}
               onPdfLoad={(totalPages) => {
                 setTotalPdfPages(totalPages);
+                setIsLoadingConversation(false); // Hide loader when PDF is fully loaded
                 console.log('SeamlessDocumentViewer: PDF loaded with', totalPages, 'pages');
               }}
               onPageChange={(page) => {
@@ -150,6 +205,9 @@ export default function SeamlessDocumentViewer({ conversationId, pdfTitle }: Sea
                 console.log('SeamlessDocumentViewer: Updating currentPage to:', page);
                 setCurrentPage(page);
                 console.log('SeamlessDocumentViewer: setCurrentPage called with:', page);
+              }}
+              onError={() => {
+                setIsLoadingConversation(false); // Hide loader on error
               }}
             />
           </div>

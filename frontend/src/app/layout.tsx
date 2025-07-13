@@ -19,13 +19,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${manrope.className} antialiased`}>
-        <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
-          {/* Sidebar - Hidden on mobile */}
-          <div className="hidden md:flex md:h-full">
+      <body className={`${manrope.className} antialiased`} suppressHydrationWarning={true}>
+        <div className="h-screen bg-white overflow-hidden">
+          {/* Fixed Sidebar - Hidden on mobile */}
+          <div className="hidden md:block">
             <Sidebar />
           </div>
-          <main className="flex-1">
+          <main 
+            className="h-full bg-white md:ml-[var(--sidebar-width,320px)]"
+            style={{
+              transition: 'margin-left 0.4s ease-out',
+            }}
+          >
             {children}
           </main>
         </div>

@@ -30,7 +30,7 @@ router.get('/:conversationId', async (req, res) => {
     // Transform messages to frontend format
     const formattedMessages = messages.map(message => ({
       id: message.id,
-      text: message.formattedText || message.text, // Use formatted content if available
+      text: message.formattedText || message.text,
       originalText: message.text,
       contentType: message.contentType || 'text',
       isUser: message.role === 'user',
@@ -53,10 +53,20 @@ router.post('/:conversationId', async (req, res) => {
 
     console.log('Received question:', question);
 
+    // Check if conversation exists
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: conversationId }
+    });
+
+    if (!conversation) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
     // Clean and process user message
     const cleanedQuestion = cleanTextContent(question);
     const processedUserMessage = await processMessageContent(cleanedQuestion, 'user');
 
+    // Always create the user message
     const userMessage = await prisma.message.create({
       data: { 
         conversationId, 
@@ -64,22 +74,40 @@ router.post('/:conversationId', async (req, res) => {
         text: cleanedQuestion,
         formattedText: processedUserMessage.formatted,
         contentType: processedUserMessage.contentType,
+        status: 'completed',
         processedAt: processedUserMessage.processedAt
       }
     });
 
+    // Check if processing is complete
+    if (conversation.processingStatus !== 'completed') {
+      // Queue the message for later processing
+      await prisma.message.update({
+        where: { id: userMessage.id },
+        data: { status: 'pending' }
+      });
+
+      // Return the user message immediately
+      return res.json({
+        id: userMessage.id,
+        text: processedUserMessage.formatted,
+        originalText: cleanedQuestion,
+        contentType: processedUserMessage.contentType,
+        isUser: true,
+        timestamp: userMessage.createdAt,
+        processedAt: processedUserMessage.processedAt
+      });
+    }
+
+    // Process the message immediately if embeddings are ready
     const questionEmbedding = await getEmbedding(question);
     const matches = await queryEmbedding(questionEmbedding, 3, conversationId);
 
     console.log('Found matches:', matches.length);
-    console.log('Matches:', JSON.stringify(matches, null, 2));
 
     // Extract and format the context from matches
     const context = matches
-      .map(match => {
-        console.log('Match metadata:', match.metadata);
-        return match.metadata?.text || '';
-      })
+      .map(match => match.metadata?.text || '')
       .filter(text => text.trim().length > 0)
       .join('\n\n');
 
@@ -98,6 +126,7 @@ router.post('/:conversationId', async (req, res) => {
           text: errorMessage,
           formattedText: processedError.formatted,
           contentType: processedError.contentType,
+          status: 'completed',
           processedAt: processedError.processedAt
         }
       });
@@ -125,6 +154,7 @@ router.post('/:conversationId', async (req, res) => {
         text: answer,
         formattedText: processedAnswer.formatted,
         contentType: processedAnswer.contentType,
+        status: 'completed',
         processedAt: processedAnswer.processedAt
       }
     });
@@ -141,7 +171,38 @@ router.post('/:conversationId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in chat route:', error);
-    res.status(500).send('Error chatting');
+    
+    // Create a user-friendly error message
+    let errorMessage = "I'm having trouble processing your request right now. Please try again in a moment.";
+    
+    if (error.message.includes('PineconeConnectionError') || error.message.includes('Connect Timeout Error')) {
+      errorMessage = "I'm having trouble connecting to the document database. Please try again in a few minutes.";
+    }
+    
+    // Process error message
+    const processedError = await processMessageContent(errorMessage, 'assistant');
+    
+    const assistantMessage = await prisma.message.create({
+      data: { 
+        conversationId, 
+        role: 'assistant', 
+        text: errorMessage,
+        formattedText: processedError.formatted,
+        contentType: processedError.contentType,
+        status: 'completed',
+        processedAt: processedError.processedAt
+      }
+    });
+
+    return res.json({
+      id: assistantMessage.id,
+      text: processedError.formatted,
+      originalText: errorMessage,
+      contentType: processedError.contentType,
+      isUser: false,
+      timestamp: assistantMessage.createdAt,
+      processedAt: processedError.processedAt
+    });
   }
 });
 

@@ -48,9 +48,10 @@ interface PreviewPDFProps {
   onPdfLoad?: (totalPages: number) => void;
   onPageChange?: (page: number) => void;
   isNavigationAction?: boolean;
+  onError?: () => void;
 }
 
-export default function PreviewPDF({ conversationId, currentPage = 1, onPdfLoad, onPageChange, isNavigationAction = false }: PreviewPDFProps) {
+export default function PreviewPDF({ conversationId, currentPage = 1, onPdfLoad, onPageChange, isNavigationAction = false, onError }: PreviewPDFProps) {
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [viewState, setViewState] = useState<ViewState>('idle');
   const [isClient, setIsClient] = useState(false);
@@ -95,6 +96,9 @@ export default function PreviewPDF({ conversationId, currentPage = 1, onPdfLoad,
       } catch (err) {
         console.error('Failed to load PDF:', err);
         setViewState('error');
+        if (onError) {
+          onError();
+        }
       }
     };
 

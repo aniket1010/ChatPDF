@@ -2,11 +2,12 @@ const express = require('express');
 const multer = require('multer');
 const pdfParse = require('pdf-parse');
 const prisma = require('../prismaClient');
-const { getEmbedding } = require('../services/embedding');
-const { upsertEmbedding } = require('../services/pinecone');
+const { getBatchEmbeddings } = require('../services/embedding');
+const { batchUpsertEmbeddings } = require('../services/pinecone');
 const { generatePDFSummary } = require('../services/pdfSummary');
 const { processSummaryContent } = require('../services/messageProcessor');
 const { validatePDF } = require('../middleware/validation');
+const { RecursiveCharacterTextSplitter } = require('langchain/text_splitter');
 const path = require('path');
 const fs = require('fs');
 
@@ -28,146 +29,264 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 const router = express.Router();
 
+// Initialize LangChain text splitter
+const textSplitter = new RecursiveCharacterTextSplitter({
+  chunkSize: 1000,      // 1000 characters per chunk
+  chunkOverlap: 100,    // 100 characters overlap between chunks
+  separators: ["\n\n", "\n", ". ", " ", ""], // Try these separators in order
+});
+
 router.post('/', upload.single('file'), validatePDF, async (req, res) => {
+  console.log('\n📤 === PDF UPLOAD STARTED ===');
+  let conversation;
+
   try {
     const filePath = req.file.path;
     const originalName = req.file.originalname;
     const mimetype = req.file.mimetype;
     const size = req.file.size;
 
-    console.log('File details:', { originalName, mimetype, size, filePath });
+    console.log('📄 File details:', { originalName, mimetype, size: `${(size / 1024 / 1024).toFixed(2)}MB` });
 
-    // Parse PDF from disk
+    // Parse PDF
     const dataBuffer = fs.readFileSync(filePath);
     const data = await pdfParse(dataBuffer, {
       max: 0, // No page limit
       pagerender: renderPage
     });
 
-    console.log('PDF parse result:', {
-      numPages: data.numpages,
-      info: data.info,
-      metadata: data.metadata
-    });
-
     const text = data.text.trim();
     if (!text) {
       return res.status(400).json({ error: 'No text content found in PDF' });
     }
+    console.log(`📊 Extracted ${text.length.toLocaleString()} characters of text`);
 
-    console.log('PDF text length:', text.length);
-    console.log('First 500 characters of text:', text.substring(0, 500));
-
-    // Generate PDF summary
-    console.log('Generating PDF summary...');
+    // Generate summary in background
     let summaryData = {};
     let processedSummary = {};
     try {
       summaryData = await generatePDFSummary(text, originalName);
-      console.log('PDF summary generated successfully');
-      
-      // Process summary content for formatting
       if (summaryData.summary) {
         processedSummary = await processSummaryContent(summaryData);
-        console.log('PDF summary processed and formatted successfully');
       }
     } catch (error) {
-      console.error('Failed to generate/process summary, proceeding without it:', error);
+      console.error('❌ Failed to generate summary, proceeding without it:', error);
     }
 
-    // Save conversation with file path and summary
-    const conversation = await prisma.conversation.create({
+    // Create conversation immediately
+    conversation = await prisma.conversation.create({
       data: {
         title: originalName,
         fileName: originalName,
         filePath: filePath,
-        summary: summaryData.summary || null,
+        summary: summaryData.summary || 'Processing PDF...',
         summaryFormatted: processedSummary.summaryFormatted || null,
-        keyFindings: summaryData.keyFindings || null,
-        keyFindingsFormatted: processedSummary.keyFindingsFormatted || null,
-        introduction: summaryData.introduction || null,
-        introductionFormatted: processedSummary.introductionFormatted || null,
-        tableOfContents: summaryData.tableOfContents || null,
-        tableOfContentsFormatted: processedSummary.tableOfContentsFormatted || null,
+        commonQuestions: summaryData.commonQuestions || null,
+        commonQuestionsFormatted: processedSummary.commonQuestionsFormatted || null,
         summaryContentType: processedSummary.summaryContentType || 'text',
         summaryGeneratedAt: summaryData.summary ? new Date() : null,
-        summaryProcessedAt: processedSummary.summaryProcessedAt || null
+        summaryProcessedAt: processedSummary.summaryProcessedAt || null,
+        processingStatus: 'pending'
       }
     });
-    console.log('Created conversation:', conversation.id);
 
-    const chunks = splitTextIntoChunks(text);
-    console.log('Number of chunks:', chunks.length);
-    console.log('Sample chunk content:', chunks[0]);
-
-    for (let i = 0; i < chunks.length; i++) {
-      const chunk = chunks[i];
-      console.log(`Processing chunk ${i + 1}/${chunks.length}`);
-      console.log('Chunk length:', chunk.length);
-      console.log('Chunk content:', chunk);
-
-      const embedding = await getEmbedding(chunk);
-      await upsertEmbedding(embedding, `${conversation.id}-${i}`, chunk, conversation.id);
-      console.log(`Successfully processed chunk ${i + 1}`);
-    }
-
+    console.log(`🆔 Created conversation: ${conversation.id}`);
+    
+    // Return conversation ID immediately
     res.json({ conversationId: conversation.id });
+
+    // Start background processing
+    processPdfInBackground(text, conversation.id, originalName);
+
   } catch (error) {
-    console.error('Error in upload route:', error);
-    res.status(500).json({ error: 'Error processing PDF file', details: error.message });
+    console.error('\n❌ === PDF UPLOAD FAILED ===');
+    console.error('💥 Error in upload route:', error);
+    
+    if (conversation && conversation.id) {
+      try {
+        await prisma.conversation.update({
+          where: { id: conversation.id },
+          data: { 
+            processingStatus: 'failed',
+            summary: 'Processing failed. Please try again.'
+          }
+        });
+      } catch (updateError) {
+        console.error('❌ Error updating failed status:', updateError);
+      }
+    }
+    
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Error processing PDF file', details: error.message });
+    }
   }
 });
 
-// Custom page renderer to ensure text extraction
-async function renderPage(pageData) {
-  const renderOptions = {
-    normalizeWhitespace: true,
-    disableCombineTextItems: false
-  };
-  return pageData.getTextContent(renderOptions)
-    .then(textContent => {
-      return textContent.items.map(item => item.str).join(' ');
+// Asynchronous background processing function
+async function processPdfInBackground(text, conversationId, originalName) {
+    console.log(`\n🔄 [${conversationId}] === BACKGROUND PROCESSING STARTED ===`);
+    console.log(`📄 [${conversationId}] Processing: ${originalName}`);
+    
+    try {
+        // Set status to processing
+        await prisma.conversation.update({
+            where: { id: conversationId },
+            data: { processingStatus: 'processing' }
+        });
+
+        // Text chunking
+        const chunks = await textSplitter.splitText(text);
+        console.log(`📊 [${conversationId}] Created ${chunks.length} chunks`);
+
+        // Generate embeddings
+        const embeddings = await getBatchEmbeddings(chunks);
+        const embeddingResults = embeddings.map((embedding, index) => ({
+            embedding,
+            chunk: chunks[index],
+            index
+        }));
+        console.log(`🧠 [${conversationId}] Generated ${embeddingResults.length} embeddings`);
+
+        // Upsert to Pinecone
+        const vectorDataArray = embeddingResults.map((result) => ({
+            id: `${conversationId}-${result.index}`,
+            vector: result.embedding,
+            text: result.chunk,
+            conversationId: conversationId
+        }));
+        
+        await batchUpsertEmbeddings(vectorDataArray);
+        console.log(`📤 [${conversationId}] Upserted ${vectorDataArray.length} vectors to Pinecone`);
+
+        // Mark as completed
+        await prisma.conversation.update({
+            where: { id: conversationId },
+            data: { processingStatus: 'completed' }
+        });
+
+        console.log(`✅ [${conversationId}] === BACKGROUND PROCESSING COMPLETED ===`);
+
+        // Process any pending messages
+        await processPendingMessages(conversationId);
+
+    } catch (error) {
+        console.error(`❌ [${conversationId}] Background processing failed:`, error);
+        
+        try {
+            await prisma.conversation.update({
+                where: { id: conversationId },
+                data: { 
+                    processingStatus: 'failed',
+                    summary: 'Processing failed. Please try again.'
+                }
+            });
+        } catch (updateError) {
+            console.error(`❌ [${conversationId}] Error updating failed status:`, updateError);
+        }
+    }
+}
+
+// Process pending messages when processing completes
+async function processPendingMessages(conversationId) {
+    try {
+        const pendingMessages = await prisma.message.findMany({
+            where: {
+                conversationId: conversationId,
+                status: 'pending',
+                role: 'user'
+            },
+            orderBy: { createdAt: 'asc' }
+        });
+
+        console.log(`📝 [${conversationId}] Processing ${pendingMessages.length} pending messages`);
+
+        for (const message of pendingMessages) {
+            try {
+                await generateChatResponse(conversationId, message.text);
+                
+                // Mark message as completed
+                await prisma.message.update({
+                    where: { id: message.id },
+                    data: { status: 'completed' }
+                });
+            } catch (error) {
+                console.error(`❌ [${conversationId}] Error processing pending message ${message.id}:`, error);
+                
+                // Mark message as failed
+                await prisma.message.update({
+                    where: { id: message.id },
+                    data: { status: 'failed' }
+                });
+            }
+        }
+    } catch (error) {
+        console.error(`❌ [${conversationId}] Error processing pending messages:`, error);
+    }
+}
+
+// Generate chat response for a question
+async function generateChatResponse(conversationId, question) {
+    const { getEmbedding } = require('../services/embedding');
+    const { queryEmbedding } = require('../services/pinecone');
+    const { askGpt } = require('../services/gpt');
+    const { processMessageContent } = require('../services/messageProcessor');
+
+    const questionEmbedding = await getEmbedding(question);
+    const matches = await queryEmbedding(questionEmbedding, 3, conversationId);
+
+    const context = matches
+        .map(match => match.metadata?.text || '')
+        .filter(text => text.trim().length > 0)
+        .join('\n\n');
+
+    if (!context) {
+        const errorMessage = "I couldn't find any relevant information in the document to answer your question. Please try asking about something else or rephrase your question.";
+        const processedError = await processMessageContent(errorMessage, 'assistant');
+        
+        await prisma.message.create({
+            data: { 
+                conversationId, 
+                role: 'assistant', 
+                text: errorMessage,
+                formattedText: processedError.formatted,
+                contentType: processedError.contentType,
+                status: 'completed',
+                processedAt: processedError.processedAt
+            }
+        });
+        return;
+    }
+
+    const answer = await askGpt(question, context);
+    const processedAnswer = await processMessageContent(answer, 'assistant');
+
+    await prisma.message.create({
+        data: { 
+            conversationId, 
+            role: 'assistant', 
+            text: answer,
+            formattedText: processedAnswer.formatted,
+            contentType: processedAnswer.contentType,
+            status: 'completed',
+            processedAt: processedAnswer.processedAt
+        }
     });
 }
 
-function splitTextIntoChunks(text) {
-  // Clean the text first
-  const cleanedText = text
-    .replace(/\s+/g, ' ') // Replace multiple spaces with single space
-    .trim(); // Remove leading/trailing whitespace
-
-  const chunkSize = 1000; // characters
-  const chunks = [];
-  
-  // Split by paragraphs first, then by chunk size
-  const paragraphs = cleanedText.split(/\n\s*\n/);
-  let currentChunk = '';
-  
-  for (const paragraph of paragraphs) {
-    if (currentChunk.length + paragraph.length > chunkSize) {
-      if (currentChunk) {
-        chunks.push(currentChunk.trim());
-        currentChunk = '';
-      }
-      // If a single paragraph is larger than chunkSize, split it
-      if (paragraph.length > chunkSize) {
-        for (let i = 0; i < paragraph.length; i += chunkSize) {
-          chunks.push(paragraph.slice(i, i + chunkSize).trim());
-        }
-      } else {
-        currentChunk = paragraph;
-      }
-    } else {
-      if (currentChunk) currentChunk += '\n\n';
-      currentChunk += paragraph;
-    }
-  }
-  
-  if (currentChunk) {
-    chunks.push(currentChunk.trim());
-  }
-  
-  return chunks;
+// PDF page renderer function
+function renderPage(pageData) {
+    return pageData.getTextContent()
+        .then(function(textContent) {
+            let lastY, text = '';
+            for (let item of textContent.items) {
+                if (lastY != item.transform[5] && text) {
+                    text += '\n';
+                }
+                text += item.str;
+                lastY = item.transform[5];
+            }
+            return text;
+        });
 }
 
 module.exports = router;

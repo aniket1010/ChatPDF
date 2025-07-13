@@ -6,6 +6,7 @@ import MobileLayout from './MobileLayout';
 import SeamlessDocumentViewer from './SeamlessDocumentViewer';
 import ChatPanel from './ChatPanel';
 import { getConversationDetails } from '@/services/api';
+import { stripPdfExtension } from '@/lib/utils';
 
 interface ResponsiveLayoutProps {
   conversationId: string;
@@ -49,6 +50,19 @@ export default function ResponsiveLayout({ conversationId }: ResponsiveLayoutPro
     }
   }, [conversationId]);
 
+  const handleConversationUpdate = (updatedConversationId: string, newTitle: string) => {
+    if (updatedConversationId === conversationId) {
+      setPdfTitle(newTitle);
+    }
+  };
+
+  const handleConversationDelete = (deletedConversationId: string) => {
+    if (deletedConversationId === conversationId) {
+      // This will be handled by the sidebar redirecting to home
+      setPdfTitle('');
+    }
+  };
+
   // Show loading state during hydration to prevent mismatch
   if (!isClient) {
     return (
@@ -59,15 +73,28 @@ export default function ResponsiveLayout({ conversationId }: ResponsiveLayoutPro
   }
 
   if (isMobile) {
-    return <MobileLayout conversationId={conversationId} pdfTitle={pdfTitle} />;
+    return <MobileLayout 
+      conversationId={conversationId} 
+      pdfTitle={stripPdfExtension(pdfTitle)} 
+      onConversationUpdate={handleConversationUpdate}
+      onConversationDelete={handleConversationDelete}
+    />;
   }
 
   // Desktop layout with resizable panels
   return (
-    <div className="flex-1 h-full">
+    <div 
+      className="flex-1 h-full"
+      style={{
+        willChange: 'contents',
+        transform: 'translate3d(0, 0, 0)',
+        contain: 'layout style size',
+        isolation: 'isolate',
+      }}
+    >
       <ResizableLayout
-        leftPanel={<SeamlessDocumentViewer conversationId={conversationId} pdfTitle={pdfTitle} />}
-        rightPanel={<ChatPanel conversationId={conversationId} pdfTitle={pdfTitle} />}
+        leftPanel={<SeamlessDocumentViewer conversationId={conversationId} pdfTitle={stripPdfExtension(pdfTitle)} />}
+        rightPanel={<ChatPanel conversationId={conversationId} pdfTitle={stripPdfExtension(pdfTitle)} />}
         initialLeftWidth={55}
         minLeftWidth={25}
         maxLeftWidth={75}

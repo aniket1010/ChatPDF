@@ -2,13 +2,49 @@
 
 import { useState } from 'react';
 import { Menu, X, Upload, FileText, Sparkles } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 export default function HomePage() {
+  const router = useRouter();
+  
   const handleUploadClick = () => {
-    // TODO: Implement upload modal or redirect to upload page
-    // For now, just log the action
-    console.log('Upload new PDF clicked');
-    // Future: router.push('/upload') or open upload modal
+    // Create a hidden file input element
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = '.pdf';
+    fileInput.style.display = 'none';
+    
+    // Add event listener for file selection
+    fileInput.addEventListener('change', async (event) => {
+      const target = event.target as HTMLInputElement;
+      const file = target.files?.[0];
+      
+      if (file) {
+        try {
+          // Import the upload function dynamically to avoid SSR issues
+          const { uploadPDF } = await import('@/services/api');
+          
+          // Upload the file - this now returns immediately with conversationId
+          const response = await uploadPDF(file);
+          
+          // Navigate to the new conversation immediately
+          // The conversation page will handle showing the processing status
+          router.push(`/conversation/${response.conversationId}`);
+          
+        } catch (error) {
+          console.error('Failed to upload PDF:', error);
+          // You could add a toast notification here
+          alert('Failed to upload PDF. Please try again.');
+        }
+      }
+      
+      // Clean up the file input
+      document.body.removeChild(fileInput);
+    });
+    
+    // Add to DOM and trigger click
+    document.body.appendChild(fileInput);
+    fileInput.click();
   };
 
   return (

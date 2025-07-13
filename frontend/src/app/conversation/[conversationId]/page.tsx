@@ -139,5 +139,7 @@ interface ConversationPageProps {
 export default function ConversationPage({ params }: ConversationPageProps) {
   const { conversationId } = use(params);
   
+  console.log('ConversationPage rendered with ID:', conversationId);
+  
   return <ConversationClient conversationId={conversationId} />;
 }

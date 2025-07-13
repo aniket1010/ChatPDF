@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { getConversationSummary, generateConversationSummary } from "@/services/api"
 import HtmlRenderer from "./HtmlRenderer"
+import { stripPdfExtension } from "@/lib/utils"
 
 interface SummaryData {
   id: string
@@ -150,7 +151,7 @@ export default function PDFSummaryPage({ conversationId }: PDFSummaryPageProps) 
                animate={{ opacity: 1, y: 0 }}
                transition={{ duration: 0.8, delay: 0.4 }}
              >
-               {summaryData.fileName.replace(/\.pdf$/i, "").replace(/_/g, " ")}
+               {stripPdfExtension(summaryData.fileName).replace(/_/g, " ")}
              </motion.h1>
 
 

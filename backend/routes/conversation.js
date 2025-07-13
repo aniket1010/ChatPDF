@@ -86,8 +86,19 @@ router.delete('/:conversationId', async (req, res) => {
             // Continue execution even if Pinecone deletion fails
         }
 
+        // Try to delete the PDF file, but don't fail if it errors
+        try {
+            if (conversation.filePath && fs.existsSync(conversation.filePath)) {
+                fs.unlinkSync(conversation.filePath);
+                console.log('PDF file deleted successfully:', conversation.filePath);
+            }
+        } catch (fileError) {
+            console.error('Warning: Failed to delete PDF file:', fileError);
+            // Continue execution even if file deletion fails
+        }
+
         res.json({ 
-            message: 'Conversation and messages deleted successfully',
+            message: 'Conversation, messages, and PDF file deleted successfully',
             warning: 'Note: Some vector embeddings might remain in Pinecone',
             deletedConversation: conversation
         });
@@ -156,12 +167,8 @@ router.get('/:conversationId/summary', async (req, res) => {
         fileName: true,
         summary: true,
         summaryFormatted: true,
-        keyFindings: true,
-        keyFindingsFormatted: true,
-        introduction: true,
-        introductionFormatted: true,
-        tableOfContents: true,
-        tableOfContentsFormatted: true,
+        commonQuestions: true,
+        commonQuestionsFormatted: true,
         summaryContentType: true,
         summaryGeneratedAt: true,
         summaryProcessedAt: true,
@@ -187,13 +194,9 @@ router.get('/:conversationId/summary', async (req, res) => {
     const responseData = {
       ...conversation,
       summary: conversation.summaryFormatted || conversation.summary,
-      keyFindings: conversation.keyFindingsFormatted || conversation.keyFindings,
-      introduction: conversation.introductionFormatted || conversation.introduction,
-      tableOfContents: conversation.tableOfContentsFormatted || conversation.tableOfContents,
+      commonQuestions: conversation.commonQuestionsFormatted || conversation.commonQuestions,
       originalSummary: conversation.summary,
-      originalKeyFindings: conversation.keyFindings,
-      originalIntroduction: conversation.introduction,
-      originalTableOfContents: conversation.tableOfContents
+      originalCommonQuestions: conversation.commonQuestions
     };
 
     res.json(responseData);
@@ -246,12 +249,8 @@ router.post('/:conversationId/summary/generate', async (req, res) => {
       data: {
         summary: summaryData.summary,
         summaryFormatted: processedSummary.summaryFormatted,
-        keyFindings: summaryData.keyFindings,
-        keyFindingsFormatted: processedSummary.keyFindingsFormatted,
-        introduction: summaryData.introduction,
-        introductionFormatted: processedSummary.introductionFormatted,
-        tableOfContents: summaryData.tableOfContents,
-        tableOfContentsFormatted: processedSummary.tableOfContentsFormatted,
+        commonQuestions: summaryData.commonQuestions,
+        commonQuestionsFormatted: processedSummary.commonQuestionsFormatted,
         summaryContentType: processedSummary.summaryContentType || 'html',
         summaryGeneratedAt: new Date(),
         summaryProcessedAt: processedSummary.summaryProcessedAt
@@ -262,12 +261,8 @@ router.post('/:conversationId/summary/generate', async (req, res) => {
         fileName: true,
         summary: true,
         summaryFormatted: true,
-        keyFindings: true,
-        keyFindingsFormatted: true,
-        introduction: true,
-        introductionFormatted: true,
-        tableOfContents: true,
-        tableOfContentsFormatted: true,
+        commonQuestions: true,
+        commonQuestionsFormatted: true,
         summaryContentType: true,
         summaryGeneratedAt: true,
         summaryProcessedAt: true,
@@ -279,13 +274,9 @@ router.post('/:conversationId/summary/generate', async (req, res) => {
     const responseData = {
       ...updatedConversation,
       summary: updatedConversation.summaryFormatted || updatedConversation.summary,
-      keyFindings: updatedConversation.keyFindingsFormatted || updatedConversation.keyFindings,
-      introduction: updatedConversation.introductionFormatted || updatedConversation.introduction,
-      tableOfContents: updatedConversation.tableOfContentsFormatted || updatedConversation.tableOfContents,
+      commonQuestions: updatedConversation.commonQuestionsFormatted || updatedConversation.commonQuestions,
       originalSummary: updatedConversation.summary,
-      originalKeyFindings: updatedConversation.keyFindings,
-      originalIntroduction: updatedConversation.introduction,
-      originalTableOfContents: updatedConversation.tableOfContents
+      originalCommonQuestions: updatedConversation.commonQuestions
     };
 
     res.json(responseData);

@@ -10,13 +10,16 @@ import Sidebar from './Sidebar';
 interface MobileLayoutProps {
   conversationId: string;
   pdfTitle?: string;
+  onConversationUpdate?: (conversationId: string, newTitle: string) => void;
+  onConversationDelete?: (conversationId: string) => void;
 }
 
 type MobileView = 'chat' | 'pdf';
 
-export default function MobileLayout({ conversationId, pdfTitle }: MobileLayoutProps) {
+export default function MobileLayout({ conversationId, pdfTitle, onConversationUpdate, onConversationDelete }: MobileLayoutProps) {
   const [currentView, setCurrentView] = useState<MobileView>('chat');
   const [showSidebar, setShowSidebar] = useState(false);
+  const [isClosingSidebar, setIsClosingSidebar] = useState(false);
   const router = useRouter();
 
   const handleViewPDF = () => {
@@ -28,7 +31,16 @@ export default function MobileLayout({ conversationId, pdfTitle }: MobileLayoutP
   };
 
   const handleToggleSidebar = () => {
-    setShowSidebar(!showSidebar);
+    if (showSidebar) {
+      // Start closing animation
+      setIsClosingSidebar(true);
+      setTimeout(() => {
+        setShowSidebar(false);
+        setIsClosingSidebar(false);
+      }, 300); // Match animation duration
+    } else {
+      setShowSidebar(true);
+    }
   };
 
   const handleGoHome = () => {
@@ -70,12 +82,38 @@ export default function MobileLayout({ conversationId, pdfTitle }: MobileLayoutP
           </div>
         </div>
 
-        {/* Mobile Sidebar Full Screen */}
-        {showSidebar && (
-          <div className="fixed inset-0 z-50 bg-white animate-slide-in-left">
-            <Sidebar onClose={handleToggleSidebar} isMobile={true} />
-          </div>
-        )}
+                  {/* Mobile Sidebar Full Screen */}
+          {showSidebar && (
+            <>
+              <div 
+                className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
+                onClick={handleToggleSidebar}
+                style={{
+                  animation: isClosingSidebar 
+                    ? 'fade-out 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards'
+                    : 'fade-in 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards',
+                }}
+              />
+              <div 
+                className="fixed inset-0 z-50 bg-white"
+                style={{
+                  animation: isClosingSidebar 
+                    ? 'slideOutSmooth 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards'
+                    : 'slideInSmooth 0.4s cubic-bezier(0.32, 0.72, 0, 1) forwards',
+                  transform: 'translate3d(0, 0, 0)',
+                  willChange: 'transform, opacity',
+                  backfaceVisibility: 'hidden',
+                }}
+              >
+                <Sidebar 
+                  onClose={handleToggleSidebar} 
+                  isMobile={true} 
+                  onConversationUpdate={onConversationUpdate}
+                  onConversationDelete={onConversationDelete}
+                />
+              </div>
+            </>
+          )}
       </>
     );
   }
@@ -95,12 +133,35 @@ export default function MobileLayout({ conversationId, pdfTitle }: MobileLayoutP
         </div>
       </div>
 
-      {/* Mobile Sidebar Full Screen */}
-      {showSidebar && (
-        <div className="fixed inset-0 z-50 bg-white animate-slide-in-left">
-          <Sidebar onClose={handleToggleSidebar} isMobile={true} />
-        </div>
-      )}
+              {/* Mobile Sidebar Full Screen */}
+        {showSidebar && (
+          <>
+            <div 
+              className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm"
+              onClick={handleToggleSidebar}
+              style={{
+                animation: isClosingSidebar 
+                  ? 'fade-out 0.3s ease-out forwards'
+                  : 'fade-in 0.3s ease-out forwards',
+              }}
+            />
+            <div 
+              className="fixed inset-0 z-50 bg-white"
+              style={{
+                animation: isClosingSidebar 
+                  ? 'slideOutSmooth 0.3s ease-out forwards'
+                  : 'slideInSmooth 0.3s ease-out forwards',
+              }}
+            >
+              <Sidebar 
+                onClose={handleToggleSidebar} 
+                isMobile={true} 
+                onConversationUpdate={onConversationUpdate}
+                onConversationDelete={onConversationDelete}
+              />
+            </div>
+          </>
+        )}
     </>
   );
 } 

@@ -119,7 +119,7 @@ async function processSummaryContent(summaryData) {
     const processed = { ...summaryData };
     
     // Process each field that might contain markdown
-    const fieldsToProcess = ['summary', 'keyFindings', 'introduction', 'tableOfContents'];
+    const fieldsToProcess = ['summary', 'commonQuestions'];
     
     for (const field of fieldsToProcess) {
       if (processed[field]) {
